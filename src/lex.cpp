@@ -1,7 +1,4 @@
 
-// TODO: remove stdio dependency
-#include "stdio.h"
-
 Dynamic_Array<Token> lex_string(String file_contents)
 {
     Dynamic_Array<Token> result;
@@ -315,7 +312,7 @@ Dynamic_Array<Token> lex_string(String file_contents)
             } break;
             default: {
                 // TODO: report better error
-                printf("Unexpected character\n");
+                print_err("Unexpected character\n");
                 ++point;
                 ++line_offset;
                 c = *point;

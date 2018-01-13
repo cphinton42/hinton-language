@@ -2,6 +2,7 @@
 #define PARSE_H
 
 #include "basic.h"
+#include "io.h"
 
 enum class AST_Type : u32
 {
@@ -68,10 +69,8 @@ struct Binary_Operator_AST
     AST *rhs;
 };
 
-// TODO: remove stdio
-#include <stdio.h>
 
 Dynamic_Array<Decl_AST> parse_tokens(Array<Token> tokens);
-void fprint_dot(FILE *f, Array<Decl_AST> decls);
+void print_dot(Print_Buffer *pb, Array<Decl_AST> decls);
 
 #endif // PARSE_H

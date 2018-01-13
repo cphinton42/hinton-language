@@ -1,8 +1,12 @@
 #include "basic.h"
+#include "io.h"
 #include "lex.h"
 #include "main.h"
 #include "parse.h"
+#include "stb/stb_sprintf.h"
 
+#include "io.cpp"
 #include "lex.cpp"
 #include "main.cpp"
 #include "parse.cpp"
+#include "stb/stb_sprintf.c"
