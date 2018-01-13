@@ -1,3 +1,6 @@
+# Local Makefile
+Makefile.local
+
 # Prerequisites
 *.d
 
