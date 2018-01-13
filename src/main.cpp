@@ -65,16 +65,14 @@ void report_error(byte *program_text, u32 line_number, u32 line_offset, String e
 int main(int argc, char **argv)
 {
     String file_contents = read_entire_file("test.txt");
-    if(file_contents.data)
+    if(!file_contents.data)
     {
-        printf("%s\n", file_contents.data);
-        
-        Dynamic_Array<Token> tokens = lex_string(file_contents);
-        for(u64 i = 0; i < tokens.count; ++i)
-        {
-            printf("Token: %ld, %d:%d, %.*s\n", (u64)tokens[i].type, tokens[i].line_number, tokens[i].line_offset, (u32)tokens[i].contents.count, tokens[i].contents.data);
-        }
+        printf("Unable to read test.txt\n");
     }
     
-    printf("Hello World!\n");
+    Dynamic_Array<Token> tokens = lex_string(file_contents);
+    Dynamic_Array<Decl_AST> decls = parse_tokens(tokens.array);
+    fprint_dot(stderr, decls.array);
+    
+    return 0;
 }

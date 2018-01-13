@@ -1,6 +1,9 @@
 # Local Makefile
 Makefile.local
 
+# Output Dot files
+*.dot
+
 # Prerequisites
 *.d
 

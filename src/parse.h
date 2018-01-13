@@ -21,39 +21,34 @@ struct AST
     u32 line_offset;
 };
 
-struct Ident_AST
+struct Ident_AST : AST
 {
-    AST base;
     String ident;
 };
 
-struct Decl_AST
+struct Decl_AST : AST
 {
-    AST base;
     Ident_AST ident;
-    AST *type;
+    AST *decl_type;
     AST *expr;
 };
 
-struct Block_AST
+struct Block_AST : AST
 {
-    AST base;
     u64 n_statements;
     AST *statements;
 };
 
-struct Function_AST
+struct Function_AST : AST
 {
-    AST base;
     u64 n_arguments;
     Ident_AST *arg_names;
     AST *arg_types;
     Block_AST block;
 };
 
-struct Number_AST
+struct Number_AST : AST
 {
-    AST base;
     String literal;
 };
 
@@ -73,6 +68,10 @@ struct Binary_Operator_AST
     AST *rhs;
 };
 
+// TODO: remove stdio
+#include <stdio.h>
+
 Dynamic_Array<Decl_AST> parse_tokens(Array<Token> tokens);
+void fprint_dot(FILE *f, Array<Decl_AST> decls);
 
 #endif // PARSE_H
