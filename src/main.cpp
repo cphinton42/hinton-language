@@ -54,6 +54,13 @@ struct AST
     u32 flags;
 };
 
+struct Function_AST
+{
+    AST base;
+};
+
+
+
 // TODO: defer
 
 String read_entire_file(const byte *file_name)
@@ -115,6 +122,8 @@ void report_error(byte *program_text, u32 line_number, u32 line_offset, String e
 }
 
 
+
+
 Dynamic_Array<Token> lex_file(String file_contents)
 {
     Dynamic_Array<Token> result;
@@ -123,7 +132,7 @@ Dynamic_Array<Token> lex_file(String file_contents)
     */
     result.count = 0;
     result.data = mem_alloc(Token, file_contents.count);
-    result.allocated - file_contents.count;
+    result.allocated = file_contents.count;
     
     byte *point = file_contents.data;
     u32 line_number = 1;
