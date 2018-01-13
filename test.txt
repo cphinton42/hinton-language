@@ -1,0 +1,36 @@
+// This is an EOL comment
+
+/= + - /=
+
+/* This is a multi-line comment
+*/
+
+/*
+	Comments
+	/*
+	 Can be nested /= / / / /
+//	*/
+*/
+
+// /*
+
+identifier1234567 / ident87654309
+
+ident / for ident += struct ident
+
+0324234.2342e  other stuff in the line // whatever
+
+0.23e12333
+
+23539872.00000000000000000000
+
+2342
+
+.02342
+
+/= /= /=
+
+/ / /
+
+/*     /= /**/ /////// ******/    / / -=
+
