@@ -1,48 +1,4 @@
 
-// TODO: remove stdio dependency
-// It's here for read_entire_file
-#include "stdio.h"
-
-// TODO: defer
-
-String read_entire_file(const byte *file_name)
-{
-    String result = {0};
-    
-    FILE *f = fopen(file_name, "rb");
-    if(!f)
-    {
-        return result;
-    }
-    
-    fseek(f, 0, SEEK_END);
-    u64 len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    
-    byte *memory = mem_alloc(byte, len+1);
-    if(!memory)
-    {
-        fclose(f);
-        return result;
-    }
-    
-    u64 bytes_read = fread(memory, 1, len, f);
-    if(bytes_read < len)
-    {
-        fclose(f);
-        mem_dealloc(memory, len+1);
-        return result;
-    }
-    
-    result.count = len+1;
-    result.data = memory;
-    
-    fclose(f);
-    result[len] = '\0';
-    
-    return result;
-}
-
 void report_error(byte *program_text, u32 line_number, u32 line_offset, String error_text)
 {
     byte *end = program_text;

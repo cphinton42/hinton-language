@@ -14,6 +14,8 @@ struct Print_Buffer
     Dynamic_Array<byte> buffer;
 };
 
+String read_entire_file(const byte *file_name);
+
 Print_Buffer make_print_buffer(int fd, u64 buffer_size = 1024);
 Print_Buffer make_file_print_buffer(const byte *file_name, u64 buffer_size = 1024);
 void init_std_print_buffers(u64 stdout_size = 1024, u64 stderr_size = 1024);

@@ -4,6 +4,54 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+// TODO: defer
+// would be nice for e.g. close(fd)
+
+String read_entire_file(const byte *file_name)
+{
+    String result = {0};
+    
+    int fd = open(file_name, O_CLOEXEC | O_RDONLY, 0);
+    if(fd < 0)
+    {
+        return result;
+    }
+    
+    struct stat file_info;
+    
+    int status = fstat(fd, &file_info);
+    if(status < 0)
+    {
+        close(fd);
+        return result;
+    }
+    
+    u64 len = file_info.st_size;
+    
+    byte *memory = mem_alloc(byte, len+1);
+    if(!memory)
+    {
+        close(fd);
+        return result;
+    }
+    
+    u64 bytes_read = read(fd, memory, len);
+    if(bytes_read < len)
+    {
+        close(fd);
+        mem_dealloc(memory, len+1);
+        return result;
+    }
+    
+    result.count = len+1;
+    result.data = memory;
+    result[len] = '\0';
+    
+    close(fd);
+    return result;
+}
+
+
 Print_Buffer make_print_buffer(int fd, u64 buffer_size)
 {
     Print_Buffer result;
