@@ -4,6 +4,16 @@
 #include "basic.h"
 #include "io.h"
 
+struct Parsing_Context
+{
+    String program_text;
+    Token *begin_tokens;
+    Token *end_tokens;
+    
+    Token *start_section;
+    Token *current;
+};
+
 enum class AST_Type : u32
 {
     ident_ast,
@@ -69,8 +79,8 @@ struct Binary_Operator_AST
     AST *rhs;
 };
 
-
-Dynamic_Array<Decl_AST> parse_tokens(Array<Token> tokens);
+Parsing_Context make_parsing_context(String program_text, Array<Token> tokens);
+Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx);
 void print_dot(Print_Buffer *pb, Array<Decl_AST> decls);
 
 #endif // PARSE_H

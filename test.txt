@@ -10,5 +10,11 @@
 */
 
 
-ident : u32 = derp
-ident2 : s32 = whatever
+ident : u32 = (derp)
+ident2 : s32 = ((whatever)
+
+
+
+// derp
+/* will it show the whole line?  */  :: /*  this is a test   */
+// hi

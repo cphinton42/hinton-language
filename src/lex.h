@@ -15,6 +15,14 @@ enum class Token_Type : u64
     colon_eq,
     double_colon,
     dot,
+    arrow,
+    
+    open_paren,
+    close_paren,
+    open_sqr,
+    close_sqr,
+    open_brace,
+    close_brace,
     
     mul,
     add,
@@ -29,6 +37,42 @@ enum class Token_Type : u64
     add_eq,
     sub_eq,
     div_eq,
+    eof,
+};
+
+const byte *token_type_names[] = {
+    "identifier",
+    "number",
+    "enum",
+    "for",
+    "struct",
+    ",",
+    ";",
+    ":",
+    ":=",
+    "::",
+    ".",
+    "->",
+    "(",
+    ")",
+    "[",
+    "]",
+    "{",
+    "}",
+    "*",
+    "+",
+    "-",
+    "|",
+    "||",
+    "&",
+    "&&",
+    "/",
+    "=",
+    "==",
+    "+=",
+    "-=",
+    "/=",
+    "EOF"
 };
 
 struct Token

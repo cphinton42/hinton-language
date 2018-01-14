@@ -1,4 +1,128 @@
 
+Parsing_Context make_parsing_context(String program_text, Array<Token> tokens)
+{
+    Parsing_Context result = {0};
+    result.program_text = program_text;
+    result.begin_tokens = tokens.data;
+    result.end_tokens = tokens.data + tokens.count;
+    
+    result.start_section = tokens.data;
+    result.current = tokens.data;
+    
+    return result;
+}
+
+internal void print_err_indented(byte *start, byte *end)
+{
+    while(start < end)
+    {
+        byte *end_section = start;
+        while(end_section < end)
+        {
+            byte b = *end_section;
+            ++end_section;
+            
+            if(b == '\r')
+            {
+                if(end_section < end && *end_section == '\n')
+                {
+                    ++end_section;
+                }
+                break;
+            }
+            else if(b == '\n')
+            {
+                break;
+            }
+        }
+        
+        print_err("    %.*s", (u32)(end_section - start), start);
+        start = end_section;
+    }
+}
+
+void report_error(Parsing_Context *ctx, const byte *error_text)
+{
+    assert(ctx->start_section < ctx->end_tokens);
+    assert(ctx->current < ctx->end_tokens);
+    
+    Token *first_tok = ctx->start_section;
+    Token *last_tok = ctx->current;
+    
+    byte *start_highlight = first_tok->contents.data;
+    byte *start = start_highlight;
+    byte *start_program = ctx->program_text.data;
+    while(start > start_program)
+    {
+        if(*start == '\n' || *start == '\r')
+        {
+            ++start;
+            break;
+        }
+        else
+        {
+            --start;
+        }
+    }
+    
+    
+    byte *start_error;
+    byte *end_highlight;
+    byte *end;
+    
+    if(last_tok == ctx->end_tokens - 1)
+    {
+        assert(ctx->begin_tokens != ctx->end_tokens);
+        
+        Token *snd_last_tok = last_tok - 1;
+        byte *start_error = snd_last_tok->contents.data;
+        byte *end_highlight = start_error + snd_last_tok->contents.count;
+        byte *end = end_highlight;
+    }
+    else
+    {
+        start_error = last_tok->contents.data;
+        end_highlight = start_error + last_tok->contents.count;
+        end = end_highlight;
+        
+        byte *end_program = ctx->program_text.data + ctx->program_text.count;
+        while(end < end_program)
+        {
+            if(*end == '\r')
+            {
+                ++end;
+                if(end < end_program && *end == '\n')
+                {
+                    ++end;
+                }
+                break;
+            }
+            else if(*end == '\n')
+            {
+                ++end;
+                break;
+            }
+            else
+            {
+                ++end;
+            }
+        }
+    }
+    
+    print_err("\x1B[1;31mError\x1B[0m: %d:%d:\n    %s\n", last_tok->line_number, last_tok->line_offset, error_text);
+    
+    print_err_indented(start, start_highlight);
+    
+    print_err("\x1B[1;33m");
+    print_err_indented(start_highlight, start_error);
+    
+    print_err("\x1B[1;31m");
+    print_err_indented(start_error, end_highlight);
+    
+    print_err("\x1B[0m");
+    print_err_indented(end_highlight, end);
+}
+
 internal Ident_AST make_ident_ast(Token ident)
 {
     Ident_AST result;
@@ -10,123 +134,175 @@ internal Ident_AST make_ident_ast(Token ident)
     return result;
 }
 
-internal AST* parse_type_expr(Array<Token> tokens, u64 i, u64 *i_out)
+internal Number_AST make_number_ast(Token number)
 {
-    if(tokens[i].type == Token_Type::ident)
-    {
-        Ident_AST *result = mem_alloc(Ident_AST, 1);
-        *result = make_ident_ast(tokens[i]);
-        
-        *i_out = ++i;
-        return result;
-    }
-    else
-    {
-        return nullptr;
-    }
+    Number_AST result;
+    result.type = AST_Type::number_ast;
+    result.flags = 0;
+    result.line_number = number.line_number;
+    result.line_offset = number.line_offset;
+    result.literal = number.contents;
+    return result;
 }
 
-Dynamic_Array<Decl_AST> parse_tokens(Array<Token> tokens)
+// TODO: fix memory leaks. Make parser allocator
+
+
+/* Recall: Weakest binding operators are at the 'top' of the grammar
+*
+* expr := mul_expr + expr 
+*       | mul_expr - expr
+*       | mul_expr
+* mul_expr := root_expr * expr
+*           | root_expr / expr
+*           | root_expr
+* root_expr := (expr)
+*              | number
+*              | function_call
+*              | ident
+* function_call := ident ( arg_list )
+*/
+internal AST* parse_expr(Parsing_Context *ctx, bool required)
 {
-    Dynamic_Array<Decl_AST> result = {0};
+    Parsing_Context sub_ctx;
+    AST *lhs = nullptr;
     
-    u64 i = 0;
-    while(i < tokens.count)
+    if(ctx->current->type == Token_Type::ident)
     {
-        if(tokens[i].type == Token_Type::ident)
+        Ident_AST *lhs_ident = mem_alloc(Ident_AST, 1);
+        *lhs_ident = make_ident_ast(*ctx->current);
+        lhs = lhs_ident;
+        ++ctx->current;
+        
+        // TODO: parse function call
+    }
+    else if(ctx->current->type == Token_Type::open_paren)
+    {
+        ++ctx->current;
+        
+        sub_ctx = *ctx;
+        lhs = parse_expr(&sub_ctx, required);
+        if(lhs)
         {
-            Decl_AST new_ast;
-            zero_struct(&new_ast);
-            new_ast.type = AST_Type::decl_ast;
-            new_ast.line_number = tokens[i].line_number;
-            new_ast.line_offset = tokens[i].line_offset;
-            new_ast.ident = make_ident_ast(tokens[i]);
+            *ctx = sub_ctx;
             
-            if(++i == tokens.count)
+            if(ctx->current->type == Token_Type::close_paren)
             {
-                // TODO: report error
-                print_err("parse error 1\n");
-                break;
-            }
-            
-            if(tokens[i].type == Token_Type::colon)
-            {
-                if(++i == tokens.count)
-                {
-                    // TODO: report error
-                    print_err("parse error 2\n");
-                    break;
-                }
-                
-                AST *type = parse_type_expr(tokens, i, &i);
-                if(type)
-                {
-                    new_ast.decl_type = type;
-                }
-                else
-                {
-                    // TODO: report error
-                    print_err("parse error 3\n");
-                }
-                
-                if(i == tokens.count)
-                {
-                    print_err("parse error 3.1\n");
-                }
-                if(tokens[i].type == Token_Type::equal)
-                {
-                    if(++i == tokens.count)
-                    {
-                        // TODO: report error
-                        print_err("parse error 3.2\n");
-                        break;
-                    }
-                    
-                    AST *expr = parse_type_expr(tokens, i, &i);
-                    if(expr)
-                    {
-                        new_ast.expr = expr;
-                    }
-                    else
-                    {
-                        print_err("parse error 3.3\n");
-                    }
-                    
-                    array_add(&result, new_ast);
-                }
-            }
-            else if(tokens[i].type == Token_Type::double_colon)
-            {
-                new_ast.decl_type = nullptr;
-                if(++i == tokens.count)
-                {
-                    // TODO: report error
-                    print_err("parse error 4\n");
-                    break;
-                }
-            }
-            else if(tokens[i].type == Token_Type::colon_eq)
-            {
-                new_ast.decl_type = nullptr;
-                if(++i == tokens.count)
-                {
-                    // TODO: report error
-                    print_err("parse error 5\n");
-                    break;
-                }
+                ++ctx->current;
             }
             else
             {
-                // TODO: report error
-                print_err("parse error 6\n");
-                ++i;
+                if(required)
+                {
+                    report_error(ctx, "Expected close parenthesis");
+                }
+                return nullptr;
             }
         }
         else
         {
-            // TODO: report error
-            print_err("parse error 7\n");
-            ++i;
+            return nullptr;
+        }
+        
+        // TODO: lambdas/function literals ?
+    }
+    else if(ctx->current->type == Token_Type::number)
+    {
+        Number_AST *lhs_number = mem_alloc(Number_AST, 1);
+        *lhs_number = make_number_ast(*ctx->current);
+        lhs = lhs_number;
+        ++ctx->current;
+    }
+    
+    return lhs;
+}
+
+Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
+{
+    Dynamic_Array<Decl_AST> result = {0};
+    Parsing_Context sub_ctx;
+    
+    while(ctx->current->type != Token_Type::eof)
+    {
+        if(ctx->current->type == Token_Type::ident)
+        {
+            Decl_AST new_ast;
+            zero_struct(&new_ast);
+            new_ast.type = AST_Type::decl_ast;
+            new_ast.line_number = ctx->current->line_number;
+            new_ast.line_offset = ctx->current->line_offset;
+            new_ast.ident = make_ident_ast(*ctx->current);
+            
+            ++ctx->current;
+            
+            if(ctx->current->type == Token_Type::colon)
+            {
+                ++ctx->current;
+                
+                sub_ctx = *ctx;
+                AST *type = parse_expr(&sub_ctx, true);
+                if(type)
+                {
+                    *ctx = sub_ctx;
+                    new_ast.decl_type = type;
+                }
+                else
+                {
+                    break;
+                }
+                
+                if(ctx->current->type == Token_Type::equal)
+                {
+                    ++ctx->current;
+                    
+                    sub_ctx = *ctx;
+                    AST *expr = parse_expr(&sub_ctx, true);
+                    if(expr)
+                    {
+                        *ctx = sub_ctx;
+                        new_ast.expr = expr;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                    
+                    array_add(&result, new_ast);
+                    ctx->start_section = ctx->current;
+                }
+                else
+                {
+                    report_error(ctx, "Declaration with no value. Expected '='");
+                    break;
+                }
+            }
+            else if(ctx->current->type == Token_Type::double_colon)
+            {
+                report_error(ctx, "Not yet implemented, type is required");
+                ++ctx->current;
+                new_ast.decl_type = nullptr;
+                
+                break;
+            }
+            else if(ctx->current->type == Token_Type::colon_eq)
+            {
+                report_error(ctx, "Not yet implemented, type is required");
+                ++ctx->current;
+                new_ast.decl_type = nullptr;
+                
+                break;
+            }
+            else
+            {
+                report_error(ctx, "Expected ':=', or '::' to make a declaration");
+                break;
+            }
+        }
+        else
+        {
+            report_error(ctx, "Expected a top-level declaration");
+            ++ctx->current;
+            ctx->start_section = ctx->current;
         }
     }
     

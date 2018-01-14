@@ -240,6 +240,25 @@ Dynamic_Array<Token> lex_string(String file_contents)
                 u64 len = point - start;
                 add_token(Token_Type::number, make_array(len, start));
             } break;
+            case ':': {
+                start = point;
+                c = *(++point);
+                
+                if(c == ':')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::double_colon, make_array(2, start));
+                }
+                else if(c == '=')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::colon_eq, make_array(2, start));
+                }
+                else
+                {
+                    add_token(Token_Type::colon, make_array(1, start));
+                }
+            } break;
             case '+': {
                 start = point;
                 c = *(++point);
@@ -263,6 +282,11 @@ Dynamic_Array<Token> lex_string(String file_contents)
                 {
                     c = *(++point);
                     add_token(Token_Type::sub_eq, make_array(2, start));
+                }
+                else if(c == '>')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::arrow, make_array(2, start));
                 }
                 else
                 {
@@ -291,24 +315,29 @@ Dynamic_Array<Token> lex_string(String file_contents)
                 add_token(Token_Type::semicolon, make_array(1, point));
                 c = *(++point);
             } break;
-            case ':': {
-                start = point;
+            case '(': {
+                add_token(Token_Type::open_paren, make_array(1, point));
                 c = *(++point);
-                
-                if(c == ':')
-                {
-                    c = *(++point);
-                    add_token(Token_Type::double_colon, make_array(2, start));
-                }
-                else if(c == '=')
-                {
-                    c = *(++point);
-                    add_token(Token_Type::colon_eq, make_array(2, start));
-                }
-                else
-                {
-                    add_token(Token_Type::colon, make_array(1, start));
-                }
+            } break;
+            case ')': {
+                add_token(Token_Type::close_paren, make_array(1, point));
+                c = *(++point);
+            } break;
+            case '[': {
+                add_token(Token_Type::open_sqr, make_array(1, point));
+                c = *(++point);
+            } break;
+            case ']': {
+                add_token(Token_Type::close_sqr, make_array(1, point));
+                c = *(++point);
+            } break;
+            case '{': {
+                add_token(Token_Type::open_brace, make_array(1, point));
+                c = *(++point);
+            } break;
+            case '}': {
+                add_token(Token_Type::close_brace, make_array(1, point));
+                c = *(++point);
             } break;
             default: {
                 // TODO: report better error
@@ -320,5 +349,6 @@ Dynamic_Array<Token> lex_string(String file_contents)
         }
     }
     
+    array_add(&result, {Token_Type::eof, line_number, line_offset, str_lit("EOF")});
     return result;
 }
