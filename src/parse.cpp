@@ -97,31 +97,28 @@ internal Number_AST make_number_ast(Token number)
 // TODO: fix memory leaks. Make parser allocator
 
 
-/* Recall: Weakest binding operators are at the 'top' of the grammar
-*
-* expr := mul_expr + expr                precedence 0
-*       | mul_expr - expr
-*       | mul_expr
-* mul_expr := root_expr * mul_expr       precedence 1
-*           | root_expr / mul_expr
-*           | root_expr
-* root_expr := (expr)                    precedence 2
+internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, u32 precedence = 2);
+
+/*
+* root_expr := (expr)
 *              | number
 *              | function_call
 *              | ident
 * function_call := ident ( arg_list )
 */
-internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, u32 precedence = 0)
+
+
+internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool required)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
-    AST *lhs = nullptr;
+    AST *result = nullptr;
     
     if(current->type == Token_Type::ident)
     {
-        Ident_AST *lhs_ident = mem_alloc(Ident_AST, 1);
-        *lhs_ident = make_ident_ast(*current);
-        lhs = lhs_ident;
+        Ident_AST *result_ident = mem_alloc(Ident_AST, 1);
+        *result_ident = make_ident_ast(*current);
+        result = result_ident;
         ++current;
         
         // TODO: parse function call
@@ -130,8 +127,8 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
     {
         ++current;
         
-        lhs = parse_expr(str, &current, required);
-        if(lhs)
+        result = parse_expr(str, &current, required);
+        if(result)
         {
             if(current->type == Token_Type::close_paren)
             {
@@ -155,44 +152,82 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
     }
     else if(current->type == Token_Type::number)
     {
-        Number_AST *lhs_number = mem_alloc(Number_AST, 1);
-        *lhs_number = make_number_ast(*current);
-        lhs = lhs_number;
+        Number_AST *result_number = mem_alloc(Number_AST, 1);
+        *result_number = make_number_ast(*current);
+        result = result_number;
         ++current;
     }
     
-    Binary_Operator op;
-    bool do_rhs = false;
-    u32 rhs_precedence = 0;
+    if(result)
+    {
+        *current_ptr = current;
+    }
+    else if(required)
+    {
+        report_error(str, start_section, current, "Expected expression");
+    }
+    return result;
+}
+
+
+internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, u32 precedence)
+{
+    Token *current = *current_ptr;
+    Token *start_section = current;
+    
+    AST *lhs = parse_base_expr(str, &current, required);
+    if(!lhs)
+    {
+        return nullptr;
+    }
     
     while(true)
     {
-        if(precedence == 0 && current->type == Token_Type::add)
+        Binary_Operator op;
+        bool found_op;
+        u32 rhs_precedence;
+        
+        switch(precedence)
         {
-            op = Binary_Operator::add;
-            do_rhs = true;
-            rhs_precedence = 0;
-        }
-        else if(precedence == 0 && current->type == Token_Type::sub)
-        {
-            op = Binary_Operator::sub;
-            do_rhs = true;
-            rhs_precedence = 0;
-        }
-        else if(precedence <= 1 && current->type == Token_Type::mul)
-        {
-            op = Binary_Operator::mul;
-            do_rhs = true;
-            rhs_precedence = 1;
-        }
-        else if(precedence <= 1 && current->type == Token_Type::div)
-        {
-            op = Binary_Operator::div;
-            do_rhs = true;
-            rhs_precedence = 1;
+            case 2:
+            if(current->type == Token_Type::add)
+            {
+                op = Binary_Operator::add;
+                found_op = true;
+                rhs_precedence = 1;
+                break;
+            }
+            if(current->type == Token_Type::sub)
+            {
+                op = Binary_Operator::sub;
+                found_op = true;
+                rhs_precedence = 1;
+                break;
+            }
+            case 1:
+            if(current->type == Token_Type::mul)
+            {
+                op = Binary_Operator::mul;
+                found_op = true;
+                rhs_precedence = 0;
+                break;
+            }
+            if(current->type == Token_Type::div)
+            {
+                op = Binary_Operator::div;
+                found_op = true;
+                rhs_precedence = 0;
+                break;
+            }
+            case 0:
+            found_op = false;
+            break;
+            default: {
+                assert(false);
+            } break;
         }
         
-        if(do_rhs)
+        if(found_op)
         {
             ++current;
             AST *rhs = parse_expr(str, &current, required, rhs_precedence);
@@ -208,19 +243,9 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
                 result->rhs = rhs;
                 
                 lhs = result;
-                do_rhs = false;
-                
-                /*
-                *current_ptr = current;
-                return result;
-                */
             }
             else
             {
-                if(required)
-                {
-                    report_error(str, start_section, current, "Expected right-hand-side expression");
-                }
                 return nullptr;
             }
         }
