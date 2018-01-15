@@ -99,19 +99,19 @@ internal Number_AST make_number_ast(Token number)
 
 /* Recall: Weakest binding operators are at the 'top' of the grammar
 *
-* expr := mul_expr + expr 
+* expr := mul_expr + expr                precedence 0
 *       | mul_expr - expr
 *       | mul_expr
-* mul_expr := root_expr * expr
-*           | root_expr / expr
+* mul_expr := root_expr * mul_expr       precedence 1
+*           | root_expr / mul_expr
 *           | root_expr
-* root_expr := (expr)
+* root_expr := (expr)                    precedence 2
 *              | number
 *              | function_call
 *              | ident
 * function_call := ident ( arg_list )
 */
-internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required)
+internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, u32 precedence = 0)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -161,69 +161,74 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required)
         ++current;
     }
     
-    /*
-    expr := mul_expr + expr 
-    *       | mul_expr - expr
-    *       | mul_expr
-    * mul_expr := root_expr * expr
-    *           | root_expr / expr
-    *           | root_expr
-    */
     Binary_Operator op;
     bool do_rhs = false;
+    u32 rhs_precedence = 0;
     
-    if(current->type == Token_Type::mul)
+    while(true)
     {
-        op = Binary_Operator::mul;
-        do_rhs = true;
-    }
-    else if(current->type == Token_Type::div)
-    {
-        op = Binary_Operator::div;
-        do_rhs = true;
-    }
-    else if(current->type == Token_Type::sub)
-    {
-        op = Binary_Operator::sub;
-        do_rhs = true;
-    }
-    else if(current->type == Token_Type::add)
-    {
-        op = Binary_Operator::add;
-        do_rhs = true;
-    }
-    
-    if(do_rhs)
-    {
-        ++current;
-        AST *rhs = parse_expr(str, &current, required);
-        if(rhs)
+        if(precedence == 0 && current->type == Token_Type::add)
         {
-            Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
-            result->type = AST_Type::binary_operator_ast;
-            result->flags = 0;
-            result->line_number = lhs->line_number;
-            result->line_offset = lhs->line_offset;
-            result->op = op;
-            result->lhs = lhs;
-            result->rhs = rhs;
-            
-            *current_ptr = current;
-            return result;
+            op = Binary_Operator::add;
+            do_rhs = true;
+            rhs_precedence = 0;
+        }
+        else if(precedence == 0 && current->type == Token_Type::sub)
+        {
+            op = Binary_Operator::sub;
+            do_rhs = true;
+            rhs_precedence = 0;
+        }
+        else if(precedence <= 1 && current->type == Token_Type::mul)
+        {
+            op = Binary_Operator::mul;
+            do_rhs = true;
+            rhs_precedence = 1;
+        }
+        else if(precedence <= 1 && current->type == Token_Type::div)
+        {
+            op = Binary_Operator::div;
+            do_rhs = true;
+            rhs_precedence = 1;
+        }
+        
+        if(do_rhs)
+        {
+            ++current;
+            AST *rhs = parse_expr(str, &current, required, rhs_precedence);
+            if(rhs)
+            {
+                Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+                result->type = AST_Type::binary_operator_ast;
+                result->flags = 0;
+                result->line_number = lhs->line_number;
+                result->line_offset = lhs->line_offset;
+                result->op = op;
+                result->lhs = lhs;
+                result->rhs = rhs;
+                
+                lhs = result;
+                do_rhs = false;
+                
+                /*
+                *current_ptr = current;
+                return result;
+                */
+            }
+            else
+            {
+                if(required)
+                {
+                    report_error(str, start_section, current, "Expected right-hand-side expression");
+                }
+                return nullptr;
+            }
         }
         else
         {
-            if(required)
-            {
-                report_error(str, start_section, current, "Expected right-hand-side expression");
-            }
-            return nullptr;
+            *current_ptr = current;
+            return lhs;
         }
-    }
-    else
-    {
-        *current_ptr = current;
-        return lhs;
     }
 }
 

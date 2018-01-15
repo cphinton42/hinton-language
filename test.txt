@@ -14,3 +14,17 @@ ident : u32 = ((derp) + 10)
 ident2 : s32 = w+10*5
 
 id3 : u32 = w*10+5
+
+id4 : u32 = 10 + 10 + 10 + 10 * 3 / 4
+
+/*
+	w*10+5
+
+	expr
+	mul_expr           +        expr
+	root_expr  *   mul_expr     mul_expr
+	ident          root_expr    root_expr
+	w              number       number
+                   10           5
+
+*/
