@@ -10,11 +10,7 @@
 */
 
 
-ident : u32 = (derp)
-ident2 : s32 = ((whatever)
+ident : u32 = ((derp) + 10)
+ident2 : s32 = w+10*5
 
-
-
-// derp
-/* will it show the whole line?  */  :: /*  this is a test   */
-// hi
+id3 : u32 = w*10+5

@@ -71,9 +71,15 @@ enum class Binary_Operator : u64
     div
 };
 
-struct Binary_Operator_AST
+const byte *binary_operator_names[] = {
+    "+",
+    "-",
+    "*",
+    "/"
+};
+
+struct Binary_Operator_AST : AST
 {
-    AST base;
     Binary_Operator op;
     AST *lhs;
     AST *rhs;

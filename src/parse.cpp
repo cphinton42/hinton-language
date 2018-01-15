@@ -1,34 +1,4 @@
 
-
-internal void print_err_indented(byte *start, byte *end)
-{
-    while(start < end)
-    {
-        byte *end_section = start;
-        while(end_section < end)
-        {
-            byte b = *end_section;
-            ++end_section;
-            
-            if(b == '\r')
-            {
-                if(end_section < end && *end_section == '\n')
-                {
-                    ++end_section;
-                }
-                break;
-            }
-            else if(b == '\n')
-            {
-                break;
-            }
-        }
-        
-        print_err("    %.*s", (u32)(end_section - start), start);
-        start = end_section;
-    }
-}
-
 void report_error(Lexed_String *str, Token *start_section, Token *current,const byte *error_text)
 {
     byte *start_highlight = start_section->contents.data;
@@ -47,47 +17,44 @@ void report_error(Lexed_String *str, Token *start_section, Token *current,const 
         }
     }
     
-    
     byte *start_error;
     byte *end_highlight;
-    byte *end;
     
     if(current == &str->tokens[str->tokens.count - 1])
     {
         assert(str->tokens.count > 0);
         
         Token *previous = current - 1;
-        byte *start_error = previous->contents.data;
-        byte *end_highlight = start_error + previous->contents.count;
-        byte *end = end_highlight;
+        start_error = previous->contents.data;
+        end_highlight = start_error + previous->contents.count;
     }
     else
     {
         start_error = current->contents.data;
         end_highlight = start_error + current->contents.count;
-        end = end_highlight;
-        
-        byte *end_program = str->program_text.data + str->program_text.count;
-        while(end < end_program)
+    }
+    
+    byte *end = end_highlight;
+    byte *end_program = str->program_text.data + str->program_text.count;
+    while(end < end_program)
+    {
+        if(*end == '\r')
         {
-            if(*end == '\r')
-            {
-                ++end;
-                if(end < end_program && *end == '\n')
-                {
-                    ++end;
-                }
-                break;
-            }
-            else if(*end == '\n')
-            {
-                ++end;
-                break;
-            }
-            else
+            ++end;
+            if(end < end_program && *end == '\n')
             {
                 ++end;
             }
+            break;
+        }
+        else if(*end == '\n')
+        {
+            ++end;
+            break;
+        }
+        else
+        {
+            ++end;
         }
     }
     
@@ -96,13 +63,13 @@ void report_error(Lexed_String *str, Token *start_section, Token *current,const 
     print_err_indented(start, start_highlight);
     
     print_err("\x1B[1;33m");
-    print_err_indented(start_highlight, start_error);
+    print_err_indented(start_highlight, start_error, false);
     
     print_err("\x1B[1;31m");
-    print_err_indented(start_error, end_highlight);
+    print_err_indented(start_error, end_highlight, false);
     
     print_err("\x1B[0m");
-    print_err_indented(end_highlight, end);
+    print_err_indented(end_highlight, end, false);
 }
 
 internal Ident_AST make_ident_ast(Token ident)
@@ -194,8 +161,70 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required)
         ++current;
     }
     
-    *current_ptr = current;
-    return lhs;
+    /*
+    expr := mul_expr + expr 
+    *       | mul_expr - expr
+    *       | mul_expr
+    * mul_expr := root_expr * expr
+    *           | root_expr / expr
+    *           | root_expr
+    */
+    Binary_Operator op;
+    bool do_rhs = false;
+    
+    if(current->type == Token_Type::mul)
+    {
+        op = Binary_Operator::mul;
+        do_rhs = true;
+    }
+    else if(current->type == Token_Type::div)
+    {
+        op = Binary_Operator::div;
+        do_rhs = true;
+    }
+    else if(current->type == Token_Type::sub)
+    {
+        op = Binary_Operator::sub;
+        do_rhs = true;
+    }
+    else if(current->type == Token_Type::add)
+    {
+        op = Binary_Operator::add;
+        do_rhs = true;
+    }
+    
+    if(do_rhs)
+    {
+        ++current;
+        AST *rhs = parse_expr(str, &current, required);
+        if(rhs)
+        {
+            Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+            result->type = AST_Type::binary_operator_ast;
+            result->flags = 0;
+            result->line_number = lhs->line_number;
+            result->line_offset = lhs->line_offset;
+            result->op = op;
+            result->lhs = lhs;
+            result->rhs = rhs;
+            
+            *current_ptr = current;
+            return result;
+        }
+        else
+        {
+            if(required)
+            {
+                report_error(str, start_section, current, "Expected right-hand-side expression");
+            }
+            return nullptr;
+        }
+    }
+    else
+    {
+        *current_ptr = current;
+        return lhs;
+    }
 }
 
 Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
@@ -340,6 +369,12 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             }
         } break;
         case AST_Type::binary_operator_ast: {
+            Binary_Operator_AST *bin_ast = static_cast<Binary_Operator_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, binary_operator_names[(u64)bin_ast->op]);
+            print_dot_child(pb, bin_ast->lhs, this_serial, serial);
+            print_dot_child(pb, bin_ast->rhs, this_serial, serial);
         } break;
         case AST_Type::number_ast: {
             Number_AST *number_ast = static_cast<Number_AST*>(ast);

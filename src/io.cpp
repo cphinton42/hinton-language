@@ -167,3 +167,49 @@ void free_buffer(Print_Buffer *pb, bool close_file)
         zero_struct(&pb->buffer);
     }
 }
+
+
+void print_err_indented(byte *start, byte *end, bool indent_first)
+{
+    bool indent = indent_first;
+    
+    if(start == end && indent)
+    {
+        print_err("    ");
+    }
+    
+    while(start < end)
+    {
+        byte *end_section = start;
+        while(end_section < end)
+        {
+            byte b = *end_section;
+            ++end_section;
+            
+            if(b == '\r')
+            {
+                if(end_section < end && *end_section == '\n')
+                {
+                    ++end_section;
+                }
+                break;
+            }
+            else if(b == '\n')
+            {
+                break;
+            }
+        }
+        
+        if(indent)
+        {
+            print_err("    %.*s", (u32)(end_section - start), start);
+        }
+        else
+        {
+            print_err("%.*s", (u32)(end_section - start), start);
+            indent = true;
+        }
+        
+        start = end_section;
+    }
+}

@@ -1,7 +1,61 @@
 
+
+internal void report_error(String program_text, byte *start_tok, byte *current, u32 line_number, u32 line_offset, const byte *error_text)
+{
+    byte *start_program = program_text.data;
+    byte *end_program = start_program + program_text.count;
+    
+    byte *start = start_tok;
+    byte *end = current;
+    while(start > start_program)
+    {
+        if(*start == '\n' || *start == '\r')
+        {
+            ++start;
+            break;
+        }
+        else
+        {
+            --start;
+        }
+    }
+    while(end < end_program)
+    {
+        byte b = *end;
+        ++end;
+        
+        if(b == '\r')
+        {
+            if(end < end_program && *end == '\n')
+            {
+                ++end;
+            }
+            break;
+        }
+        else if(b == '\n')
+        {
+            break;
+        }
+    }
+    
+    // TODO: remove color codes when not outputing to a terminal
+    // TODO: perhaps change to highlight in the program text, rather than use an arrow ?
+    
+    print_err("\x1B[1;31mError\x1B[0m: %d:%d:\n    %s\n", line_number, line_offset, error_text);
+    print_err_indented(start, start_tok);
+    
+    print_err("\x1B[1;33m%.*s\x1B[1;31m%c\x1B[0m", (u32)(current - start_tok), start_tok, *current);
+    
+    if(current != end)
+    {
+        print_err_indented(current+1, end, false);
+    }
+}
+
 Dynamic_Array<Token> lex_string(String file_contents)
 {
     Dynamic_Array<Token> result;
+    bool lex_error = false;
     /* Note: do we want a more conservative guess about the number of tokens
     *  Right now we just allocate as many tokens as there are characters
     */
@@ -223,7 +277,8 @@ Dynamic_Array<Token> lex_string(String file_contents)
                         {
                             u64 len = point - start;
                             line_offset += len;
-                            report_error(start, line_number, line_offset, str_lit("Floating point literal cannot have an empty exponent."));
+                            report_error(file_contents, start, point, line_number, line_offset, "Floating point literal cannot have an empty exponent.");
+                            lex_error = true;
                             continue;
                         }
                         else
@@ -259,20 +314,6 @@ Dynamic_Array<Token> lex_string(String file_contents)
                     add_token(Token_Type::colon, make_array(1, start));
                 }
             } break;
-            case '+': {
-                start = point;
-                c = *(++point);
-                
-                if(c == '=')
-                {
-                    c = *(++point);
-                    add_token(Token_Type::add_eq, make_array(2, start));
-                }
-                else
-                {
-                    add_token(Token_Type::add, make_array(1, start));
-                }
-            } break;
             case '-':
             {
                 start = point;
@@ -291,6 +332,34 @@ Dynamic_Array<Token> lex_string(String file_contents)
                 else
                 {
                     add_token(Token_Type::sub, make_array(1, start));
+                }
+            } break;
+            case '+': {
+                start = point;
+                c = *(++point);
+                
+                if(c == '=')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::add_eq, make_array(2, start));
+                }
+                else
+                {
+                    add_token(Token_Type::add, make_array(1, start));
+                }
+            } break;
+            case '*': {
+                start = point;
+                c = *(++point);
+                
+                if(c == '=')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::mul_eq, make_array(2, start));
+                }
+                else
+                {
+                    add_token(Token_Type::mul, make_array(1, start));
                 }
             } break;
             case '=': {
@@ -341,14 +410,22 @@ Dynamic_Array<Token> lex_string(String file_contents)
             } break;
             default: {
                 // TODO: report better error
-                print_err("Unexpected character\n");
+                report_error(file_contents, point-1, point, line_number, line_offset, "Unexpected character");
                 ++point;
                 ++line_offset;
                 c = *point;
+                lex_error = true;
             } break;
         }
     }
     
     array_add(&result, {Token_Type::eof, line_number, line_offset, str_lit("EOF")});
+    
+    if(lex_error)
+    {
+        mem_dealloc(result.data, result.allocated);
+        zero_struct(&result);
+    }
+    
     return result;
 }

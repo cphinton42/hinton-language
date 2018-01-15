@@ -27,6 +27,8 @@ void print_buf(Print_Buffer *pb, const byte *fmt, ...);
 void flush_buffer(Print_Buffer *pb);
 void free_buffer(Print_Buffer *pb, bool close_file = true);
 
+void print_err_indented(byte *start, byte *end, bool indent_first = true);
+
 extern Print_Buffer stdout_buf;
 extern Print_Buffer stderr_buf;
 
