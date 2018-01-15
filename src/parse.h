@@ -65,17 +65,23 @@ struct Number_AST : AST
 
 enum class Binary_Operator : u64
 {
+    access,
     add,
     sub,
     mul,
-    div
+    div,
+    call,
+    subscript,
 };
 
 const byte *binary_operator_names[] = {
+    ".",
     "+",
     "-",
     "*",
-    "/"
+    "/",
+    "()",
+    "[]",
 };
 
 struct Binary_Operator_AST : AST

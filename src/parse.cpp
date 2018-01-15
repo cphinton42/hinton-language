@@ -17,44 +17,45 @@ void report_error(Lexed_String *str, Token *start_section, Token *current,const 
         }
     }
     
+    bool error_at_eof = (current == &str->tokens[str->tokens.count - 1]);
+    byte *end_program = str->program_text.data + str->program_text.count;
+    
     byte *start_error;
     byte *end_highlight;
+    byte *end;
     
-    if(current == &str->tokens[str->tokens.count - 1])
+    if(error_at_eof)
     {
-        assert(str->tokens.count > 0);
-        
-        Token *previous = current - 1;
-        start_error = previous->contents.data;
-        end_highlight = start_error + previous->contents.count;
+        start_error = end_program;
+        end_highlight = end_program;
+        end = end_program;
     }
     else
     {
         start_error = current->contents.data;
         end_highlight = start_error + current->contents.count;
-    }
-    
-    byte *end = end_highlight;
-    byte *end_program = str->program_text.data + str->program_text.count;
-    while(end < end_program)
-    {
-        if(*end == '\r')
+        end = end_highlight;
+        
+        while(end < end_program)
         {
-            ++end;
-            if(end < end_program && *end == '\n')
+            if(*end == '\r')
+            {
+                ++end;
+                if(end < end_program && *end == '\n')
+                {
+                    ++end;
+                }
+                break;
+            }
+            else if(*end == '\n')
+            {
+                ++end;
+                break;
+            }
+            else
             {
                 ++end;
             }
-            break;
-        }
-        else if(*end == '\n')
-        {
-            ++end;
-            break;
-        }
-        else
-        {
-            ++end;
         }
     }
     
@@ -65,11 +66,18 @@ void report_error(Lexed_String *str, Token *start_section, Token *current,const 
     print_err("\x1B[1;33m");
     print_err_indented(start_highlight, start_error, false);
     
-    print_err("\x1B[1;31m");
-    print_err_indented(start_error, end_highlight, false);
-    
-    print_err("\x1B[0m");
-    print_err_indented(end_highlight, end, false);
+    if(error_at_eof)
+    {
+        print_err("\x1B[1;31mEOF\x1B[0m\n");
+    }
+    else
+    {
+        print_err("\x1B[1;31m");
+        print_err_indented(start_error, end_highlight, false);
+        
+        print_err("\x1B[0m");
+        print_err_indented(end_highlight, end, false);
+    }
 }
 
 internal Ident_AST make_ident_ast(Token ident)
@@ -97,80 +105,10 @@ internal Number_AST make_number_ast(Token number)
 // TODO: fix memory leaks. Make parser allocator
 
 
-internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, u32 precedence = 2);
-
-/*
-* root_expr := (expr)
-*              | number
-*              | function_call
-*              | ident
-* function_call := ident ( arg_list )
-*/
 
 
-internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool required)
-{
-    Token *current = *current_ptr;
-    Token *start_section = current;
-    AST *result = nullptr;
-    
-    if(current->type == Token_Type::ident)
-    {
-        Ident_AST *result_ident = mem_alloc(Ident_AST, 1);
-        *result_ident = make_ident_ast(*current);
-        result = result_ident;
-        ++current;
-        
-        // TODO: parse function call
-    }
-    else if(current->type == Token_Type::open_paren)
-    {
-        ++current;
-        
-        result = parse_expr(str, &current, required);
-        if(result)
-        {
-            if(current->type == Token_Type::close_paren)
-            {
-                ++current;
-            }
-            else
-            {
-                if(required)
-                {
-                    report_error(str, start_section, current, "Expected close parenthesis");
-                }
-                return nullptr;
-            }
-        }
-        else
-        {
-            return nullptr;
-        }
-        
-        // TODO: lambdas/function literals ?
-    }
-    else if(current->type == Token_Type::number)
-    {
-        Number_AST *result_number = mem_alloc(Number_AST, 1);
-        *result_number = make_number_ast(*current);
-        result = result_number;
-        ++current;
-    }
-    
-    if(result)
-    {
-        *current_ptr = current;
-    }
-    else if(required)
-    {
-        report_error(str, start_section, current, "Expected expression");
-    }
-    return result;
-}
-
-
-internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, u32 precedence)
+internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool required);
+internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, u32 precedence = 3)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -189,36 +127,164 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
         
         switch(precedence)
         {
-            case 2:
+            case 3:
             if(current->type == Token_Type::add)
             {
                 op = Binary_Operator::add;
                 found_op = true;
-                rhs_precedence = 1;
+                rhs_precedence = 2;
                 break;
             }
             if(current->type == Token_Type::sub)
             {
                 op = Binary_Operator::sub;
                 found_op = true;
-                rhs_precedence = 1;
+                rhs_precedence = 2;
                 break;
             }
-            case 1:
+            case 2:
             if(current->type == Token_Type::mul)
             {
                 op = Binary_Operator::mul;
                 found_op = true;
-                rhs_precedence = 0;
+                rhs_precedence = 1;
                 break;
             }
             if(current->type == Token_Type::div)
             {
                 op = Binary_Operator::div;
                 found_op = true;
-                rhs_precedence = 0;
+                rhs_precedence = 1;
                 break;
             }
+            case 1:
+            if(current->type == Token_Type::open_paren)
+            {
+                op = Binary_Operator::call;
+                
+                ++current;
+                AST *rhs = parse_expr(str, &current, required);
+                if(rhs)
+                {
+                    if(current->type == Token_Type::close_paren)
+                    {
+                        ++current;
+                        
+                        Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+                        result->type = AST_Type::binary_operator_ast;
+                        result->flags = 0;
+                        result->line_number = lhs->line_number;
+                        result->line_offset = lhs->line_offset;
+                        result->op = op;
+                        result->lhs = lhs;
+                        result->rhs = rhs;
+                        
+                        lhs = result;
+                        
+                        continue;
+                    }
+                    else
+                    {
+                        if(required)
+                        {
+                            report_error(str, start_section, current, "Expected ')'");
+                        }
+                        return nullptr;
+                    }
+                }
+                else
+                {
+                    return nullptr;
+                }
+                
+                break;
+            }
+            if(current->type == Token_Type::open_sqr)
+            {
+                op = Binary_Operator::subscript;
+                
+                ++current;
+                AST *rhs = parse_expr(str, &current, required);
+                if(rhs)
+                {
+                    if(current->type == Token_Type::close_sqr)
+                    {
+                        ++current;
+                        
+                        Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+                        result->type = AST_Type::binary_operator_ast;
+                        result->flags = 0;
+                        result->line_number = lhs->line_number;
+                        result->line_offset = lhs->line_offset;
+                        result->op = op;
+                        result->lhs = lhs;
+                        result->rhs = rhs;
+                        
+                        lhs = result;
+                        
+                        continue;
+                    }
+                    else
+                    {
+                        if(required)
+                        {
+                            report_error(str, start_section, current, "Expected ']'");
+                        }
+                        return nullptr;
+                    }
+                }
+                else
+                {
+                    return nullptr;
+                }
+                
+                break;
+            }
+            if(current->type == Token_Type::dot)
+            {
+                op = Binary_Operator::access;
+                
+                ++current;
+                if(current->type == Token_Type::ident)
+                {
+                    Ident_AST *rhs = mem_alloc(Ident_AST, 1);
+                    *rhs = make_ident_ast(*current);
+                    ++current;
+                    
+                    Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+                    result->type = AST_Type::binary_operator_ast;
+                    result->flags = 0;
+                    result->line_number = lhs->line_number;
+                    result->line_offset = lhs->line_offset;
+                    result->op = op;
+                    result->lhs = lhs;
+                    result->rhs = rhs;
+                    
+                    lhs = result;
+                    
+                    continue;
+                }
+                else
+                {
+                    if(required)
+                    {
+                        report_error(str, start_section, current, "Expected identifier");
+                    }
+                    return nullptr;
+                }
+                
+                break;
+            }
+            /*
+                if(current->type == Token_Type::double_plus)
+                {
+                    break;
+                }
+                if(current->type == Token_Type::double_minus)
+                {
+                    break;
+                }
+                */
             case 0:
             found_op = false;
             break;
@@ -256,6 +322,65 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
         }
     }
 }
+
+internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool required)
+{
+    Token *current = *current_ptr;
+    Token *start_section = current;
+    AST *result = nullptr;
+    
+    // TODO: lambdas/function literals ?
+    if(current->type == Token_Type::ident)
+    {
+        Ident_AST *result_ident = mem_alloc(Ident_AST, 1);
+        *result_ident = make_ident_ast(*current);
+        result = result_ident;
+        ++current;
+    }
+    else if(current->type == Token_Type::open_paren)
+    {
+        ++current;
+        
+        result = parse_expr(str, &current, required);
+        if(result)
+        {
+            if(current->type == Token_Type::close_paren)
+            {
+                ++current;
+            }
+            else
+            {
+                if(required)
+                {
+                    report_error(str, start_section, current, "Expected close parenthesis");
+                }
+                return nullptr;
+            }
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+    else if(current->type == Token_Type::number)
+    {
+        Number_AST *result_number = mem_alloc(Number_AST, 1);
+        *result_number = make_number_ast(*current);
+        result = result_number;
+        ++current;
+    }
+    
+    if(result)
+    {
+        *current_ptr = current;
+    }
+    else if(required)
+    {
+        report_error(str, start_section, current, "Expected expression");
+    }
+    return result;
+}
+
 
 Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
 {
