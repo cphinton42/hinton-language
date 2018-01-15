@@ -1,16 +1,4 @@
 
-Parsing_Context make_parsing_context(String program_text, Array<Token> tokens)
-{
-    Parsing_Context result = {0};
-    result.program_text = program_text;
-    result.begin_tokens = tokens.data;
-    result.end_tokens = tokens.data + tokens.count;
-    
-    result.start_section = tokens.data;
-    result.current = tokens.data;
-    
-    return result;
-}
 
 internal void print_err_indented(byte *start, byte *end)
 {
@@ -41,17 +29,11 @@ internal void print_err_indented(byte *start, byte *end)
     }
 }
 
-void report_error(Parsing_Context *ctx, const byte *error_text)
+void report_error(Lexed_String *str, Token *start_section, Token *current,const byte *error_text)
 {
-    assert(ctx->start_section < ctx->end_tokens);
-    assert(ctx->current < ctx->end_tokens);
-    
-    Token *first_tok = ctx->start_section;
-    Token *last_tok = ctx->current;
-    
-    byte *start_highlight = first_tok->contents.data;
+    byte *start_highlight = start_section->contents.data;
     byte *start = start_highlight;
-    byte *start_program = ctx->program_text.data;
+    byte *start_program = str->program_text.data;
     while(start > start_program)
     {
         if(*start == '\n' || *start == '\r')
@@ -70,22 +52,22 @@ void report_error(Parsing_Context *ctx, const byte *error_text)
     byte *end_highlight;
     byte *end;
     
-    if(last_tok == ctx->end_tokens - 1)
+    if(current == &str->tokens[str->tokens.count - 1])
     {
-        assert(ctx->begin_tokens != ctx->end_tokens);
+        assert(str->tokens.count > 0);
         
-        Token *snd_last_tok = last_tok - 1;
-        byte *start_error = snd_last_tok->contents.data;
-        byte *end_highlight = start_error + snd_last_tok->contents.count;
+        Token *previous = current - 1;
+        byte *start_error = previous->contents.data;
+        byte *end_highlight = start_error + previous->contents.count;
         byte *end = end_highlight;
     }
     else
     {
-        start_error = last_tok->contents.data;
-        end_highlight = start_error + last_tok->contents.count;
+        start_error = current->contents.data;
+        end_highlight = start_error + current->contents.count;
         end = end_highlight;
         
-        byte *end_program = ctx->program_text.data + ctx->program_text.count;
+        byte *end_program = str->program_text.data + str->program_text.count;
         while(end < end_program)
         {
             if(*end == '\r')
@@ -109,7 +91,7 @@ void report_error(Parsing_Context *ctx, const byte *error_text)
         }
     }
     
-    print_err("\x1B[1;31mError\x1B[0m: %d:%d:\n    %s\n", last_tok->line_number, last_tok->line_offset, error_text);
+    print_err("\x1B[1;31mError\x1B[0m: %d:%d:\n    %s\n", current->line_number, current->line_offset, error_text);
     
     print_err_indented(start, start_highlight);
     
@@ -162,39 +144,37 @@ internal Number_AST make_number_ast(Token number)
 *              | ident
 * function_call := ident ( arg_list )
 */
-internal AST* parse_expr(Parsing_Context *ctx, bool required)
+internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required)
 {
-    Parsing_Context sub_ctx;
+    Token *current = *current_ptr;
+    Token *start_section = current;
     AST *lhs = nullptr;
     
-    if(ctx->current->type == Token_Type::ident)
+    if(current->type == Token_Type::ident)
     {
         Ident_AST *lhs_ident = mem_alloc(Ident_AST, 1);
-        *lhs_ident = make_ident_ast(*ctx->current);
+        *lhs_ident = make_ident_ast(*current);
         lhs = lhs_ident;
-        ++ctx->current;
+        ++current;
         
         // TODO: parse function call
     }
-    else if(ctx->current->type == Token_Type::open_paren)
+    else if(current->type == Token_Type::open_paren)
     {
-        ++ctx->current;
+        ++current;
         
-        sub_ctx = *ctx;
-        lhs = parse_expr(&sub_ctx, required);
+        lhs = parse_expr(str, &current, required);
         if(lhs)
         {
-            *ctx = sub_ctx;
-            
-            if(ctx->current->type == Token_Type::close_paren)
+            if(current->type == Token_Type::close_paren)
             {
-                ++ctx->current;
+                ++current;
             }
             else
             {
                 if(required)
                 {
-                    report_error(ctx, "Expected close parenthesis");
+                    report_error(str, start_section, current, "Expected close parenthesis");
                 }
                 return nullptr;
             }
@@ -206,44 +186,45 @@ internal AST* parse_expr(Parsing_Context *ctx, bool required)
         
         // TODO: lambdas/function literals ?
     }
-    else if(ctx->current->type == Token_Type::number)
+    else if(current->type == Token_Type::number)
     {
         Number_AST *lhs_number = mem_alloc(Number_AST, 1);
-        *lhs_number = make_number_ast(*ctx->current);
+        *lhs_number = make_number_ast(*current);
         lhs = lhs_number;
-        ++ctx->current;
+        ++current;
     }
     
+    *current_ptr = current;
     return lhs;
 }
 
-Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
+Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
 {
     Dynamic_Array<Decl_AST> result = {0};
-    Parsing_Context sub_ctx;
     
-    while(ctx->current->type != Token_Type::eof)
+    Token *current = str->tokens.data;
+    Token *start_section = current;
+    
+    while(current->type != Token_Type::eof)
     {
-        if(ctx->current->type == Token_Type::ident)
+        if(current->type == Token_Type::ident)
         {
             Decl_AST new_ast;
             zero_struct(&new_ast);
             new_ast.type = AST_Type::decl_ast;
-            new_ast.line_number = ctx->current->line_number;
-            new_ast.line_offset = ctx->current->line_offset;
-            new_ast.ident = make_ident_ast(*ctx->current);
+            new_ast.line_number = current->line_number;
+            new_ast.line_offset = current->line_offset;
+            new_ast.ident = make_ident_ast(*current);
             
-            ++ctx->current;
+            ++current;
             
-            if(ctx->current->type == Token_Type::colon)
+            if(current->type == Token_Type::colon)
             {
-                ++ctx->current;
+                ++current;
                 
-                sub_ctx = *ctx;
-                AST *type = parse_expr(&sub_ctx, true);
+                AST *type = parse_expr(str, &current, true);
                 if(type)
                 {
-                    *ctx = sub_ctx;
                     new_ast.decl_type = type;
                 }
                 else
@@ -251,15 +232,13 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
                     break;
                 }
                 
-                if(ctx->current->type == Token_Type::equal)
+                if(current->type == Token_Type::equal)
                 {
-                    ++ctx->current;
+                    ++current;
                     
-                    sub_ctx = *ctx;
-                    AST *expr = parse_expr(&sub_ctx, true);
+                    AST *expr = parse_expr(str, &current, true);
                     if(expr)
                     {
-                        *ctx = sub_ctx;
                         new_ast.expr = expr;
                     }
                     else
@@ -268,41 +247,41 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
                     }
                     
                     array_add(&result, new_ast);
-                    ctx->start_section = ctx->current;
+                    start_section = current;
                 }
                 else
                 {
-                    report_error(ctx, "Declaration with no value. Expected '='");
+                    report_error(str, start_section, current, "Declaration with no value. Expected '='");
                     break;
                 }
             }
-            else if(ctx->current->type == Token_Type::double_colon)
+            else if(current->type == Token_Type::double_colon)
             {
-                report_error(ctx, "Not yet implemented, type is required");
-                ++ctx->current;
+                report_error(str, start_section, current, "Not yet implemented, type is required");
+                ++current;
                 new_ast.decl_type = nullptr;
                 
                 break;
             }
-            else if(ctx->current->type == Token_Type::colon_eq)
+            else if(current->type == Token_Type::colon_eq)
             {
-                report_error(ctx, "Not yet implemented, type is required");
-                ++ctx->current;
+                report_error(str, start_section, current, "Not yet implemented, type is required");
+                ++current;
                 new_ast.decl_type = nullptr;
                 
                 break;
             }
             else
             {
-                report_error(ctx, "Expected ':=', or '::' to make a declaration");
+                report_error(str, start_section, current, "Expected ':=', or '::' to make a declaration");
                 break;
             }
         }
         else
         {
-            report_error(ctx, "Expected a top-level declaration");
-            ++ctx->current;
-            ctx->start_section = ctx->current;
+            report_error(str, start_section, current, "Expected a top-level declaration");
+            ++current;
+            start_section = current;
         }
     }
     

@@ -4,14 +4,14 @@
 #include "basic.h"
 #include "io.h"
 
-struct Parsing_Context
+// Want to keep program_text, begin_tokens, end_tokens constant
+// start_section is only local
+// current goes forward and back
+
+struct Lexed_String
 {
     String program_text;
-    Token *begin_tokens;
-    Token *end_tokens;
-    
-    Token *start_section;
-    Token *current;
+    Dynamic_Array<Token> tokens;
 };
 
 enum class AST_Type : u32
@@ -79,8 +79,7 @@ struct Binary_Operator_AST
     AST *rhs;
 };
 
-Parsing_Context make_parsing_context(String program_text, Array<Token> tokens);
-Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx);
+Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str);
 void print_dot(Print_Buffer *pb, Array<Decl_AST> decls);
 
 #endif // PARSE_H

@@ -32,9 +32,8 @@ int main(int argc, char **argv)
     
     Dynamic_Array<Token> tokens = lex_string(file_contents);
     
-    Parsing_Context ctx = make_parsing_context(file_contents, tokens.array);
-    
-    Dynamic_Array<Decl_AST> decls = parse_tokens(&ctx);
+    Lexed_String str = {file_contents, tokens};
+    Dynamic_Array<Decl_AST> decls = parse_tokens(&str);
     print_dot(&stdout_buf, decls.array);
     
     return 0;
