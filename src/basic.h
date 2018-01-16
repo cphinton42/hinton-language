@@ -61,7 +61,7 @@ internal inline void fill_memory_(void *dest, u8 value, u64 size);
 (mem_dealloc_(ptr, (n)*sizeof(decltype(*(ptr)))))
 
 internal inline void *mem_alloc_(u64 size);
-internal inline void *mem_realloc_(void *old_ptr, u64 old_size, u64 new_size);
+internal inline void *mem_resize_(void *old_ptr, u64 old_size, u64 new_size);
 internal inline void mem_dealloc_(void *ptr, u64 size);
 
 
