@@ -9,7 +9,7 @@ CXX ?= g++
 CXXFLAGS.release ?= -g -O3 -march=native -DNDEBUG
 CXXFLAGS.debug   ?= -g -march=native
 
-CXXFLAGS = -std=c++11 $(CXXFLAGS.$(BUILD))
+CXXFLAGS = -std=c++11 -fno-exceptions -fno-rtti $(CXXFLAGS.$(BUILD))
 LIBS =
 
 
