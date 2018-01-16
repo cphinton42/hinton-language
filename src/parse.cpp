@@ -1,9 +1,16 @@
 
-void report_error(Lexed_String *str, Token *start_section, Token *current,const byte *error_text)
+void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size)
+{
+    ctx->program_text = program_text;
+    ctx->tokens = tokens;
+    init_pool(&ctx->ast_pool, pool_block_size);
+}
+
+void report_error(Parsing_Context *ctx, Token *start_section, Token *current,const byte *error_text)
 {
     byte *start_highlight = start_section->contents.data;
     byte *start = start_highlight;
-    byte *start_program = str->program_text.data;
+    byte *start_program = ctx->program_text.data;
     while(start > start_program)
     {
         if(*start == '\n' || *start == '\r')
@@ -17,8 +24,8 @@ void report_error(Lexed_String *str, Token *start_section, Token *current,const 
         }
     }
     
-    bool error_at_eof = (current == &str->tokens[str->tokens.count - 1]);
-    byte *end_program = str->program_text.data + str->program_text.count;
+    bool error_at_eof = (current == &ctx->tokens[ctx->tokens.count - 1]);
+    byte *end_program = ctx->program_text.data + ctx->program_text.count;
     
     byte *start_error;
     byte *end_highlight;
@@ -107,13 +114,13 @@ internal Number_AST make_number_ast(Token number)
 
 
 
-internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool required);
-internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, u32 precedence = 3)
+internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, bool required);
+internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool required, u32 precedence = 3)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
     
-    AST *lhs = parse_base_expr(str, &current, required);
+    AST *lhs = parse_base_expr(ctx, &current, required);
     if(!lhs)
     {
         return nullptr;
@@ -163,14 +170,14 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
                 op = Binary_Operator::call;
                 
                 ++current;
-                AST *rhs = parse_expr(str, &current, required);
+                AST *rhs = parse_expr(ctx, &current, required);
                 if(rhs)
                 {
                     if(current->type == Token_Type::close_paren)
                     {
                         ++current;
                         
-                        Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+                        Binary_Operator_AST *result = pool_alloc(Binary_Operator_AST, &ctx->ast_pool, 1);
                         result->type = AST_Type::binary_operator_ast;
                         result->flags = 0;
                         result->line_number = lhs->line_number;
@@ -187,7 +194,7 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
                     {
                         if(required)
                         {
-                            report_error(str, start_section, current, "Expected ')'");
+                            report_error(ctx, start_section, current, "Expected ')'");
                         }
                         return nullptr;
                     }
@@ -204,14 +211,14 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
                 op = Binary_Operator::subscript;
                 
                 ++current;
-                AST *rhs = parse_expr(str, &current, required);
+                AST *rhs = parse_expr(ctx, &current, required);
                 if(rhs)
                 {
                     if(current->type == Token_Type::close_sqr)
                     {
                         ++current;
                         
-                        Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+                        Binary_Operator_AST *result = pool_alloc(Binary_Operator_AST, &ctx->ast_pool, 1);
                         result->type = AST_Type::binary_operator_ast;
                         result->flags = 0;
                         result->line_number = lhs->line_number;
@@ -228,7 +235,7 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
                     {
                         if(required)
                         {
-                            report_error(str, start_section, current, "Expected ']'");
+                            report_error(ctx, start_section, current, "Expected ']'");
                         }
                         return nullptr;
                     }
@@ -247,11 +254,11 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
                 ++current;
                 if(current->type == Token_Type::ident)
                 {
-                    Ident_AST *rhs = mem_alloc(Ident_AST, 1);
+                    Ident_AST *rhs = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
                     *rhs = make_ident_ast(*current);
                     ++current;
                     
-                    Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+                    Binary_Operator_AST *result = pool_alloc(Binary_Operator_AST, &ctx->ast_pool, 1);
                     result->type = AST_Type::binary_operator_ast;
                     result->flags = 0;
                     result->line_number = lhs->line_number;
@@ -268,7 +275,7 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
                 {
                     if(required)
                     {
-                        report_error(str, start_section, current, "Expected identifier");
+                        report_error(ctx, start_section, current, "Expected identifier");
                     }
                     return nullptr;
                 }
@@ -296,10 +303,10 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
         if(found_op)
         {
             ++current;
-            AST *rhs = parse_expr(str, &current, required, rhs_precedence);
+            AST *rhs = parse_expr(ctx, &current, required, rhs_precedence);
             if(rhs)
             {
-                Binary_Operator_AST *result = mem_alloc(Binary_Operator_AST, 1);
+                Binary_Operator_AST *result = pool_alloc(Binary_Operator_AST, &ctx->ast_pool, 1);
                 result->type = AST_Type::binary_operator_ast;
                 result->flags = 0;
                 result->line_number = lhs->line_number;
@@ -323,7 +330,7 @@ internal AST* parse_expr(Lexed_String *str, Token **current_ptr, bool required, 
     }
 }
 
-internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool required)
+internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, bool required)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -332,7 +339,7 @@ internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool requi
     // TODO: lambdas/function literals ?
     if(current->type == Token_Type::ident)
     {
-        Ident_AST *result_ident = mem_alloc(Ident_AST, 1);
+        Ident_AST *result_ident = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
         *result_ident = make_ident_ast(*current);
         result = result_ident;
         ++current;
@@ -341,7 +348,7 @@ internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool requi
     {
         ++current;
         
-        result = parse_expr(str, &current, required);
+        result = parse_expr(ctx, &current, required);
         if(result)
         {
             if(current->type == Token_Type::close_paren)
@@ -352,7 +359,7 @@ internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool requi
             {
                 if(required)
                 {
-                    report_error(str, start_section, current, "Expected close parenthesis");
+                    report_error(ctx, start_section, current, "Expected close parenthesis");
                 }
                 return nullptr;
             }
@@ -364,7 +371,7 @@ internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool requi
     }
     else if(current->type == Token_Type::number)
     {
-        Number_AST *result_number = mem_alloc(Number_AST, 1);
+        Number_AST *result_number = pool_alloc(Number_AST, &ctx->ast_pool, 1);
         *result_number = make_number_ast(*current);
         result = result_number;
         ++current;
@@ -376,17 +383,17 @@ internal AST *parse_base_expr(Lexed_String *str, Token **current_ptr, bool requi
     }
     else if(required)
     {
-        report_error(str, start_section, current, "Expected expression");
+        report_error(ctx, start_section, current, "Expected expression");
     }
     return result;
 }
 
 
-Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
+Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
 {
     Dynamic_Array<Decl_AST> result = {0};
     
-    Token *current = str->tokens.data;
+    Token *current = ctx->tokens.data;
     Token *start_section = current;
     
     while(current->type != Token_Type::eof)
@@ -406,7 +413,7 @@ Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
             {
                 ++current;
                 
-                AST *type = parse_expr(str, &current, true);
+                AST *type = parse_expr(ctx, &current, true);
                 if(type)
                 {
                     new_ast.decl_type = type;
@@ -420,7 +427,7 @@ Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
                 {
                     ++current;
                     
-                    AST *expr = parse_expr(str, &current, true);
+                    AST *expr = parse_expr(ctx, &current, true);
                     if(expr)
                     {
                         new_ast.expr = expr;
@@ -429,19 +436,26 @@ Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
                     {
                         break;
                     }
-                    
-                    array_add(&result, new_ast);
-                    start_section = current;
+                    if(current->type == Token_Type::semicolon)
+                    {
+                        ++current;
+                        array_add(&result, new_ast);
+                        start_section = current;
+                    }
+                    else
+                    {
+                        report_error(ctx, start_section, current, "Expected ';' after declaration");
+                    }
                 }
                 else
                 {
-                    report_error(str, start_section, current, "Declaration with no value. Expected '='");
+                    report_error(ctx, start_section, current, "Declaration with no value. Expected '='");
                     break;
                 }
             }
             else if(current->type == Token_Type::double_colon)
             {
-                report_error(str, start_section, current, "Not yet implemented, type is required");
+                report_error(ctx, start_section, current, "Not yet implemented, type is required");
                 ++current;
                 new_ast.decl_type = nullptr;
                 
@@ -449,7 +463,7 @@ Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
             }
             else if(current->type == Token_Type::colon_eq)
             {
-                report_error(str, start_section, current, "Not yet implemented, type is required");
+                report_error(ctx, start_section, current, "Not yet implemented, type is required");
                 ++current;
                 new_ast.decl_type = nullptr;
                 
@@ -457,13 +471,14 @@ Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str)
             }
             else
             {
-                report_error(str, start_section, current, "Expected ':=', or '::' to make a declaration");
+                report_error(ctx, start_section, current, "Expected ':=', or '::' to make a declaration");
                 break;
             }
         }
         else
         {
-            report_error(str, start_section, current, "Expected a top-level declaration");
+            report_error(ctx, start_section, current, "Expected a top-level declaration");
+            // TODO: could skip to semicolon for a better recovery
             ++current;
             start_section = current;
         }

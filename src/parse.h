@@ -3,15 +3,13 @@
 
 #include "basic.h"
 #include "io.h"
+#include "pool_allocator.h"
 
-// Want to keep program_text, begin_tokens, end_tokens constant
-// start_section is only local
-// current goes forward and back
-
-struct Lexed_String
+struct Parsing_Context
 {
     String program_text;
-    Dynamic_Array<Token> tokens;
+    Array<Token> tokens;
+    Pool_Allocator ast_pool;
 };
 
 enum class AST_Type : u32
@@ -91,7 +89,9 @@ struct Binary_Operator_AST : AST
     AST *rhs;
 };
 
-Dynamic_Array<Decl_AST> parse_tokens(Lexed_String *str);
+void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size);
+
+Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx);
 void print_dot(Print_Buffer *pb, Array<Decl_AST> decls);
 
 #endif // PARSE_H

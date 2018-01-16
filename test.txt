@@ -10,11 +10,11 @@
 */
 
 
-ident : u32 = ((derp) + 10)
-ident2 : s32 = w+10*5
+ident : u32 = ((derp) + 10);
+ident2 : s32 = w+10*5;
 
-id3 : u32 = w*10+5
+id3 : u32 = w*10+5;
 
-id4 : u32 = 10 + 10 + 10 + 10 * 3 / 4
+id4 : u32 = 10 + 10 + 10 + 10 * 3 / 4;
 
-id4 : u32 = func(bar)[10 + 10].member + 10
+id4 : u32 = func(bar)[10 + 10].member + 10;
