@@ -59,22 +59,11 @@ internal inline Block_Header* pool_get_block(Pool_Allocator *pool, u64 block_siz
             return block;
         }
     }
+    if(block_size < pool->new_block_size)
+    {
+        block_size = pool->new_block_size;
+    }
     return allocate_block(block_size);
-}
-
-internal inline Block_Header* pool_get_any_block(Pool_Allocator *pool)
-{
-    if(pool->free_blocks)
-    {
-        Block_Header *result = pool->free_blocks;
-        pool->free_blocks = result->next;
-        result->next = nullptr;
-        return result;
-    }
-    else
-    {
-        return allocate_block(pool->new_block_size);
-    }
 }
 
 // TODO: let the pool take from free blocks
@@ -84,59 +73,82 @@ void *pool_alloc_(Pool_Allocator *pool, u64 size)
     {
         assert(pool->new_block_size > 0);
         
-        Block_Header *block = pool_get_any_block(pool);
+        Block_Header *block = pool_get_block(pool, 0);
         pool->current_block = block;
         pool->current_point = block->memory;
-        pool->current_end = block->memory + block->length - sizeof(Block_Header);
+        pool->current_end = block->memory - sizeof(Block_Header) + block->length;
     }
     
     assert(pool->current_block && pool->current_point && pool->current_end);
     
     u64 available_space = pool->current_end - pool->current_point;
     
-    if(size <= available_space)
-    {
-        // There is enough space for the allocation
-        
-        void *result = pool->current_point;
-        uintptr_t unaligned_point = (uintptr_t)(pool->current_point + size);
-        pool->current_point = (byte*)((unaligned_point + 7) & (~7));
-        return result;
-    }
-    else
+    if(size > available_space)
     {
         u64 block_size = size + sizeof(Block_Header);
-        if(pool->new_block_size > block_size)
-        {
-            block_size = pool->new_block_size;
-        }
         
         Block_Header *block = pool_get_block(pool, block_size);
-        void *result = block->memory;
+        block_size = block->length;
         
-        u64 potential_waste = block_size - size - sizeof(Block_Header);
-        if(potential_waste <= available_space)
+        // Retire the old block
+        pool->current_block->next = pool->used_blocks;
+        pool->used_blocks = pool->current_block;
+        pool->mark += available_space;
+        
+        pool->current_block = block;
+        pool->current_point = block->memory;
+        pool->current_end = block->memory - sizeof(Block_Header) + block->length;
+        
+        available_space = pool->current_end - pool->current_point;
+    }
+    
+    assert(size <= available_space);
+    
+    byte *result = pool->current_point;
+    uintptr_t unaligned_point = (uintptr_t)(pool->current_point + size);
+    pool->current_point = (byte*)((unaligned_point + 7) & (~7));
+    
+    pool->mark += (pool->current_point - result);
+    
+    return (void*)result;
+}
+
+void pool_rewind(Pool_Allocator *pool, u64 mark)
+{
+    assert(mark < pool->mark);
+    
+    do
+    {
+        u64 to_rewind = pool->mark - mark;
+        u64 in_current = pool->current_point - pool->current_block->memory;
+        
+        if(in_current <= to_rewind)
         {
-            // Less fragmentation if we put the new block on the used_blocks list
-            
-            block->next = pool->used_blocks;
-            pool->used_blocks = block;
+            pool->current_point -= to_rewind;
+            pool->mark -= to_rewind;
         }
         else
         {
-            // Less fragmentation if we replace the current block with the newly allocated one
+            // Free current block
+            pool->current_block->next = pool->free_blocks;
+            pool->free_blocks = pool->current_block;
+            pool->mark -= in_current;
             
-            pool->current_block->next = pool->used_blocks;
-            pool->used_blocks = pool->current_block;
+            // Get next block from the used list
+            assert(pool->used_blocks);
+            
+            Block_Header *block = pool->used_blocks;
+            pool->used_blocks = pool->used_blocks->next;
+            block->next = nullptr;
             
             pool->current_block = block;
-            uintptr_t unaligned_point = (uintptr_t)(block->memory + size);
-            pool->current_point = (byte*)((unaligned_point + 7) & (~7));
-            pool->current_end = block->memory + block->length - sizeof(Block_Header);
+            pool->current_point = block->memory;
+            pool->current_end = block->memory - sizeof(Block_Header) + block->length;
         }
-        
-        return result;
     }
+    while(mark < pool->mark);
+    
+    assert(mark == pool->mark);
 }
 
 void pool_reset(Pool_Allocator *pool)
@@ -158,6 +170,7 @@ void pool_reset(Pool_Allocator *pool)
         pool->free_blocks = pool->used_blocks;
         pool->used_blocks = nullptr;
     }
+    pool->mark = 0;
 }
 
 void pool_release(Pool_Allocator *pool)
@@ -180,4 +193,5 @@ void pool_release(Pool_Allocator *pool)
     
     pool->current_point = nullptr;
     pool->current_end = nullptr;
+    pool->mark = 0;
 }

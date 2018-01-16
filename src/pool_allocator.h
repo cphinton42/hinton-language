@@ -13,6 +13,7 @@ struct Pool_Allocator
     Block_Header *current_block;
     byte *current_point;
     byte *current_end;
+    u64 mark;
     
     Block_Header *used_blocks;
     Block_Header *free_blocks;
@@ -30,6 +31,7 @@ void init_pool(Pool_Allocator *pool, u64 block_size);
 void *pool_alloc_(Pool_Allocator *pool, u64 size);
 void *pool_resize_(Pool_Allocator *pool, void *old_ptr, u64 old_size, u64 new_size);
 
+void pool_rewind(Pool_Allocator *pool, u64 mark);
 void pool_reset(Pool_Allocator *pool);
 void pool_release(Pool_Allocator *pool);
 
