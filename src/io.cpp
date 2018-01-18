@@ -95,7 +95,7 @@ void init_std_print_buffers(u64 stdout_size, u64 stderr_size)
 
 internal inline byte *get_printable_memory(Print_Buffer *pb)
 {
-    if(pb->buffer.count + STB_SPRINTF_MIN < pb->buffer.allocated)
+    if(pb->buffer.allocated < pb->buffer.count + STB_SPRINTF_MIN)
     {
         flush_buffer(pb);
     }
