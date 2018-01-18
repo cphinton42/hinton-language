@@ -17,6 +17,7 @@ enum class AST_Type : u32
     ident_ast,
     decl_ast,
     block_ast,
+    function_type_ast,
     function_ast,
     binary_operator_ast,
     number_ast,
@@ -35,6 +36,13 @@ struct Ident_AST : AST
     String ident;
 };
 
+// Note: not actually part of the AST structure, just used during parsing
+struct Parameter_AST
+{
+    Ident_AST *name;
+    AST *type;
+};
+
 struct Decl_AST : AST
 {
     Ident_AST ident;
@@ -44,16 +52,20 @@ struct Decl_AST : AST
 
 struct Block_AST : AST
 {
-    u64 n_statements;
-    AST *statements;
+    Array<AST*> statements;
+};
+
+struct Function_Type_AST : AST
+{
+    Array<AST*> parameter_types;
+    Array<AST*> return_types;
 };
 
 struct Function_AST : AST
 {
-    u64 n_arguments;
-    Ident_AST *arg_names;
-    AST *arg_types;
-    Block_AST block;
+    Function_Type_AST *prototype;
+    Array<Ident_AST*> param_names;
+    Block_AST *block;
 };
 
 struct Number_AST : AST

@@ -109,18 +109,15 @@ internal Number_AST make_number_ast(Token number)
     return result;
 }
 
-// TODO: fix memory leaks. Make parser allocator
 
-
-
-
-internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, bool required);
-internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool required, u32 precedence = 3)
+internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
+internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr);
+internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence = 3)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
     
-    AST *lhs = parse_base_expr(ctx, &current, required);
+    AST *lhs = parse_base_expr(ctx, &current);
     if(!lhs)
     {
         return nullptr;
@@ -170,7 +167,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool require
                 op = Binary_Operator::call;
                 
                 ++current;
-                AST *rhs = parse_expr(ctx, &current, required);
+                AST *rhs = parse_expr(ctx, &current);
                 if(rhs)
                 {
                     if(current->type == Token_Type::close_paren)
@@ -192,10 +189,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool require
                     }
                     else
                     {
-                        if(required)
-                        {
-                            report_error(ctx, start_section, current, "Expected ')'");
-                        }
+                        report_error(ctx, start_section, current, "Expected ')'");
                         return nullptr;
                     }
                 }
@@ -211,7 +205,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool require
                 op = Binary_Operator::subscript;
                 
                 ++current;
-                AST *rhs = parse_expr(ctx, &current, required);
+                AST *rhs = parse_expr(ctx, &current);
                 if(rhs)
                 {
                     if(current->type == Token_Type::close_sqr)
@@ -233,10 +227,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool require
                     }
                     else
                     {
-                        if(required)
-                        {
-                            report_error(ctx, start_section, current, "Expected ']'");
-                        }
+                        report_error(ctx, start_section, current, "Expected ']'");
                         return nullptr;
                     }
                 }
@@ -273,10 +264,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool require
                 }
                 else
                 {
-                    if(required)
-                    {
-                        report_error(ctx, start_section, current, "Expected identifier");
-                    }
+                    report_error(ctx, start_section, current, "Expected identifier");
                     return nullptr;
                 }
                 
@@ -303,7 +291,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool require
         if(found_op)
         {
             ++current;
-            AST *rhs = parse_expr(ctx, &current, required, rhs_precedence);
+            AST *rhs = parse_expr(ctx, &current, rhs_precedence);
             if(rhs)
             {
                 Binary_Operator_AST *result = pool_alloc(Binary_Operator_AST, &ctx->ast_pool, 1);
@@ -330,7 +318,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, bool require
     }
 }
 
-internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, bool required)
+internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -346,20 +334,162 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, bool re
     }
     else if(current->type == Token_Type::open_paren)
     {
+        u32 line_number = current->line_number;
+        u32 line_offset = current->line_offset;
+        
         ++current;
         
-        result = parse_expr(ctx, &current, required);
+        result = parse_expr(ctx, &current);
         if(result)
         {
+            bool is_ident = (result->type == AST_Type::ident_ast);
+            
             if(current->type == Token_Type::close_paren)
             {
                 ++current;
             }
+            else if(current->type == Token_Type::colon && is_ident)
+            {
+                ++current;
+                
+                Ident_AST *ident = static_cast<Ident_AST*>(result);
+                AST *type = parse_expr(ctx, &current);
+                if(!type)
+                {
+                    return nullptr;
+                }
+                
+                // TODO create a temporary allocator for things like this ?
+                Dynamic_Array<Parameter_AST> parameters = {0};
+                array_add(&parameters, {ident,type});
+                
+                while(true)
+                {
+                    if(current->type == Token_Type::comma)
+                    {
+                        ++current;
+                        Parameter_AST param;
+                        if(current->type == Token_Type::ident)
+                        {
+                            Ident_AST *ident = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
+                            *ident = make_ident_ast(*current);
+                            param.name = ident;
+                            ++current;
+                            if(current->type == Token_Type::colon)
+                            {
+                                ++current;
+                                param.type= parse_expr(ctx, &current);
+                                if(param.type)
+                                {
+                                    array_add(&parameters, param);
+                                }
+                                else
+                                {
+                                    return nullptr;
+                                }
+                            }
+                            else
+                            {
+                                report_error(ctx, start_section, current, "Expected ':'");
+                                return nullptr;
+                            }
+                        }
+                        else
+                        {
+                            report_error(ctx, start_section, current, "Expected identifier");
+                            return nullptr;
+                        }
+                    }
+                    else if(current->type == Token_Type::close_paren)
+                    {
+                        ++current;
+                        break;
+                    }
+                    else
+                    {
+                        report_error(ctx, start_section, current, "Expected ',' or ')'");
+                        // TODO free parameters
+                        return nullptr;
+                    }
+                }
+                
+                AST *return_type = nullptr;
+                
+                if(current->type == Token_Type::arrow)
+                {
+                    ++current;
+                    return_type = parse_expr(ctx, &current);
+                    if(!return_type)
+                    {
+                        return nullptr;
+                    }
+                }
+                
+                if(current->type == Token_Type::open_brace)
+                {
+                    Block_AST *block = parse_statement_block(ctx, &current);
+                    if(block)
+                    {
+                        Ident_AST **param_names = pool_alloc(Ident_AST*, &ctx->ast_pool, parameters.count);
+                        AST **param_types = pool_alloc(AST*, &ctx->ast_pool, parameters.count);
+                        
+                        for(u64 i = 0; i < parameters.count; ++i)
+                        {
+                            param_names[i] = parameters[i].name;
+                            param_types[i] = parameters[i].type;
+                        }
+                        
+                        Function_Type_AST *func_type = pool_alloc(Function_Type_AST, &ctx->ast_pool, 1);
+                        
+                        func_type->type = AST_Type::function_type_ast;
+                        func_type->flags = 0;
+                        func_type->line_number = line_number;
+                        func_type->line_offset = line_offset;
+                        
+                        func_type->parameter_types.count = parameters.count;
+                        func_type->parameter_types.data = param_types;
+                        if(return_type)
+                        {
+                            func_type->return_types.count = 1;
+                            func_type->return_types.data = pool_alloc(AST*, &ctx->ast_pool, 1);
+                            func_type->return_types[0] = return_type;
+                        }
+                        else
+                        {
+                            func_type->return_types = {0};
+                        }
+                        
+                        Function_AST *result_func = pool_alloc(Function_AST, &ctx->ast_pool, 1);
+                        result_func->type = AST_Type::function_ast;
+                        result_func->flags = 0;
+                        result_func->line_number = line_number;
+                        result_func->line_offset = line_offset;
+                        result_func->prototype = func_type;
+                        result_func->param_names.count = parameters.count;
+                        result_func->param_names.data = param_names;
+                        result_func->block = block;
+                        result = result_func;
+                    }
+                    else
+                    {
+                        return nullptr;
+                    }
+                }
+                else
+                {
+                    report_error(ctx, start_section, current, "Expected '{' to begin function body");
+                    return nullptr;
+                }
+            }
             else
             {
-                if(required)
+                if(is_ident)
                 {
-                    report_error(ctx, start_section, current, "Expected close parenthesis");
+                    report_error(ctx, start_section, current, "Expected ')' for expression, or ':' for a function");
+                }
+                else
+                {
+                    report_error(ctx, start_section, current, "Expected ')'");
                 }
                 return nullptr;
             }
@@ -381,9 +511,48 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, bool re
     {
         *current_ptr = current;
     }
-    else if(required)
+    else
     {
         report_error(ctx, start_section, current, "Expected expression");
+    }
+    return result;
+}
+
+internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr)
+{
+    Token *current = *current_ptr;
+    Token *start_section = current;
+    Block_AST *result = nullptr;
+    
+    u32 line_number = current->line_number;
+    u32 line_offset = current->line_offset;
+    
+    if(current->type == Token_Type::open_brace)
+    {
+        ++current;
+        
+        // TODO: parse statements
+        
+        if(current->type == Token_Type::close_brace)
+        {
+            ++current;
+            result = pool_alloc(Block_AST, &ctx->ast_pool, 1);
+            zero_struct(result);
+            
+            result->type = AST_Type::block_ast;
+            result->flags = 0;
+            result->line_number = line_number;
+            result->line_offset = line_offset;
+        }
+    }
+    else
+    {
+        report_error(ctx, start_section, current, "Expected '{' to begin statement block");
+    }
+    
+    if(result)
+    {
+        *current_ptr = current;
     }
     return result;
 }
@@ -413,7 +582,7 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
             {
                 ++current;
                 
-                AST *type = parse_expr(ctx, &current, true);
+                AST *type = parse_expr(ctx, &current);
                 if(type)
                 {
                     new_ast.decl_type = type;
@@ -427,7 +596,7 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
                 {
                     ++current;
                     
-                    AST *expr = parse_expr(ctx, &current, true);
+                    AST *expr = parse_expr(ctx, &current);
                     if(expr)
                     {
                         new_ast.expr = expr;
@@ -521,9 +690,23 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             u64 this_serial = (*serial)++;
             print_buf(pb, "n%ld[label=\"Block\"];\n", this_serial);
             
-            for(u64 i = 0; i < block_ast->n_statements; ++i)
+            for(u64 i = 0; i < block_ast->statements.count; ++i)
             {
-                print_dot_child(pb, &block_ast->statements[i], this_serial, serial);
+                print_dot_child(pb, block_ast->statements[i], this_serial, serial);
+            }
+        } break;
+        case AST_Type::function_type_ast: {
+            Function_Type_AST *type_ast = static_cast<Function_Type_AST*>(ast);
+            u64 this_serial = (*serial)++;
+            print_buf(pb, "n%ld[label=\"Function Type\"];\n", this_serial);
+            
+            for(u64 i = 0; i < type_ast->parameter_types.count; ++i)
+            {
+                print_dot_child(pb, type_ast->parameter_types[i], this_serial, serial);
+            }
+            for(u64 i = 0; i < type_ast->return_types.count; ++i)
+            {
+                print_dot_child(pb, type_ast->return_types[i], this_serial, serial);
             }
         } break;
         case AST_Type::function_ast: {
@@ -532,11 +715,12 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             u64 this_serial = (*serial)++;
             print_buf(pb, "n%ld[label=\"Function\"];\n", this_serial);
             
-            for(u64 i = 0; i < function_ast->n_arguments; ++i)
+            print_dot_child(pb, function_ast->prototype, this_serial, serial);
+            for(u64 i = 0; i < function_ast->param_names.count; ++i)
             {
-                print_dot_child(pb, &function_ast->arg_names[i], this_serial, serial);
-                print_dot_child(pb, &function_ast->arg_types[i], this_serial, serial);
+                print_dot_child(pb, function_ast->param_names[i], this_serial, serial);
             }
+            print_dot_child(pb, function_ast->block, this_serial, serial);
         } break;
         case AST_Type::binary_operator_ast: {
             Binary_Operator_AST *bin_ast = static_cast<Binary_Operator_AST*>(ast);
