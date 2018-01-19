@@ -7,6 +7,7 @@ enum class Token_Type : u64
     number,
     key_enum,
     key_for,
+    key_if,
     key_struct,
     
     comma,
@@ -46,6 +47,7 @@ const byte *token_type_names[] = {
     "number",
     "enum",
     "for",
+    "if",
     "struct",
     ",",
     ";",

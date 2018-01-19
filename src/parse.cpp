@@ -532,25 +532,42 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     Token *start_section = current;
     Block_AST *result = nullptr;
     
-    u32 line_number = current->line_number;
-    u32 line_offset = current->line_offset;
-    
     if(current->type == Token_Type::open_brace)
     {
+        result = pool_alloc(Block_AST, &ctx->ast_pool, 1);
+        
+        result->type = AST_Type::block_ast;
+        result->flags = 0;
+        result->line_number = current->line_number;
+        result->line_offset = current->line_offset;
+        
         ++current;
         
-        // TODO: parse statements
+        // TODO: memory leak
+        Dynamic_Array<AST*> statements = {0};
         
-        if(current->type == Token_Type::close_brace)
+        // TODO: parse statements
+        while(true)
         {
-            ++current;
-            result = pool_alloc(Block_AST, &ctx->ast_pool, 1);
-            zero_struct(result);
-            
-            result->type = AST_Type::block_ast;
-            result->flags = 0;
-            result->line_number = line_number;
-            result->line_offset = line_offset;
+            if(current->type == Token_Type::key_for)
+            {
+            }
+            else if(current->type == Token_Type::key_if)
+            {
+            }
+            else if(current->type == Token_Type::close_brace)
+            {
+                ++current;
+                
+                result->statements.count = statements.count;
+                result->statements.data = pool_alloc(AST*, &ctx->ast_pool, statements.count);
+                
+                for(u64 i = 0; i < statements.count; ++i)
+                {
+                    result->statements[i] = statements[i];
+                }
+                break;
+            }
         }
     }
     else
