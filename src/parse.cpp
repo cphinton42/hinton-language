@@ -338,21 +338,44 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         u32 line_offset = current->line_offset;
         
         ++current;
+        bool expect_func = false;
+        Ident_AST **param_names = nullptr; 
+        AST **param_types = nullptr;
+        u64 n_parameters = 0;
         
-        result = parse_expr(ctx, &current);
-        if(result)
+        if(current->type == Token_Type::close_paren)
         {
-            bool is_ident = (result->type == AST_Type::ident_ast);
-            
+            // expect function literal with no parameters
+            ++current;
+            expect_func = true;
+        }
+        else
+        {
+            AST *first_expr = parse_expr(ctx, &current);
             if(current->type == Token_Type::close_paren)
             {
+                // Just a parethesized expression
                 ++current;
+                result = first_expr;
             }
-            else if(current->type == Token_Type::colon && is_ident)
+            else
             {
+                expect_func = true;
+                
+                if(first_expr->type != AST_Type::ident_ast)
+                {
+                    report_error(ctx, start_section, current, "Expected ')'");
+                    return nullptr;
+                }
+                if(current->type != Token_Type::colon)
+                {
+                    report_error(ctx, start_section, current, "Expected ':' in parameter list");
+                    return nullptr;
+                }
+                
                 ++current;
                 
-                Ident_AST *ident = static_cast<Ident_AST*>(result);
+                Ident_AST *ident = static_cast<Ident_AST*>(first_expr);
                 AST *type = parse_expr(ctx, &current);
                 if(!type)
                 {
@@ -360,6 +383,7 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
                 }
                 
                 // TODO create a temporary allocator for things like this ?
+                // In any case, this is currently a memory leak
                 Dynamic_Array<Parameter_AST> parameters = {0};
                 array_add(&parameters, {ident,type});
                 
@@ -408,95 +432,79 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
                     else
                     {
                         report_error(ctx, start_section, current, "Expected ',' or ')'");
-                        // TODO free parameters
                         return nullptr;
                     }
                 }
                 
-                AST *return_type = nullptr;
+                n_parameters = parameters.count;
+                param_names = pool_alloc(Ident_AST*, &ctx->ast_pool, n_parameters);
+                param_types = pool_alloc(AST*, &ctx->ast_pool, n_parameters);
                 
-                if(current->type == Token_Type::arrow)
+                for(u64 i = 0; i < n_parameters; ++i)
                 {
-                    ++current;
-                    return_type = parse_expr(ctx, &current);
-                    if(!return_type)
-                    {
-                        return nullptr;
-                    }
+                    param_names[i] = parameters[i].name;
+                    param_types[i] = parameters[i].type;
                 }
-                
-                if(current->type == Token_Type::open_brace)
+            }
+        }
+        
+        if(expect_func)
+        {
+            // TODO review code here
+            // TODO: parse return type here, if expect_func_body
+            // TODO: parse block here, if expect_func_body
+            
+            AST *return_type = nullptr;
+            
+            if(current->type == Token_Type::arrow)
+            {
+                ++current;
+                return_type = parse_expr(ctx, &current);
+                if(!return_type)
                 {
-                    Block_AST *block = parse_statement_block(ctx, &current);
-                    if(block)
-                    {
-                        Ident_AST **param_names = pool_alloc(Ident_AST*, &ctx->ast_pool, parameters.count);
-                        AST **param_types = pool_alloc(AST*, &ctx->ast_pool, parameters.count);
-                        
-                        for(u64 i = 0; i < parameters.count; ++i)
-                        {
-                            param_names[i] = parameters[i].name;
-                            param_types[i] = parameters[i].type;
-                        }
-                        
-                        Function_Type_AST *func_type = pool_alloc(Function_Type_AST, &ctx->ast_pool, 1);
-                        
-                        func_type->type = AST_Type::function_type_ast;
-                        func_type->flags = 0;
-                        func_type->line_number = line_number;
-                        func_type->line_offset = line_offset;
-                        
-                        func_type->parameter_types.count = parameters.count;
-                        func_type->parameter_types.data = param_types;
-                        if(return_type)
-                        {
-                            func_type->return_types.count = 1;
-                            func_type->return_types.data = pool_alloc(AST*, &ctx->ast_pool, 1);
-                            func_type->return_types[0] = return_type;
-                        }
-                        else
-                        {
-                            func_type->return_types = {0};
-                        }
-                        
-                        Function_AST *result_func = pool_alloc(Function_AST, &ctx->ast_pool, 1);
-                        result_func->type = AST_Type::function_ast;
-                        result_func->flags = 0;
-                        result_func->line_number = line_number;
-                        result_func->line_offset = line_offset;
-                        result_func->prototype = func_type;
-                        result_func->param_names.count = parameters.count;
-                        result_func->param_names.data = param_names;
-                        result_func->block = block;
-                        result = result_func;
-                    }
-                    else
-                    {
-                        return nullptr;
-                    }
-                }
-                else
-                {
-                    report_error(ctx, start_section, current, "Expected '{' to begin function body");
                     return nullptr;
                 }
             }
-            else
+            
+            Block_AST *block = parse_statement_block(ctx, &current);
+            if(block)
             {
-                if(is_ident)
+                
+                Function_Type_AST *func_type = pool_alloc(Function_Type_AST, &ctx->ast_pool, 1);
+                
+                func_type->type = AST_Type::function_type_ast;
+                func_type->flags = 0;
+                func_type->line_number = line_number;
+                func_type->line_offset = line_offset;
+                
+                func_type->parameter_types.count = n_parameters;
+                func_type->parameter_types.data = param_types;
+                if(return_type)
                 {
-                    report_error(ctx, start_section, current, "Expected ')' for expression, or ':' for a function");
+                    func_type->return_types.count = 1;
+                    func_type->return_types.data = pool_alloc(AST*, &ctx->ast_pool, 1);
+                    func_type->return_types[0] = return_type;
                 }
                 else
                 {
-                    report_error(ctx, start_section, current, "Expected ')'");
+                    func_type->return_types = {0};
                 }
+                
+                Function_AST *result_func = pool_alloc(Function_AST, &ctx->ast_pool, 1);
+                result_func->type = AST_Type::function_ast;
+                result_func->flags = 0;
+                result_func->line_number = line_number;
+                result_func->line_offset = line_offset;
+                result_func->prototype = func_type;
+                result_func->param_names.count = n_parameters;
+                result_func->param_names.data = param_names;
+                result_func->block = block;
+                result = result_func;
+            }
+            else
+            {
                 return nullptr;
             }
-        }
-        else
-        {
-            return nullptr;
         }
     }
     else if(current->type == Token_Type::number)
