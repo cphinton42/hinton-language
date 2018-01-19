@@ -1,0 +1,45 @@
+
+top = top-stmt*
+
+top-stmt = decl
+
+decl = ident '=' expr ':' expr ';'
+     | ident ':=' expr ';'
+     | const-decl
+
+const-decl = ident '::' expr ';'
+
+expr = expr3 '+' expr
+     | expr3 '-' expr
+     | expr3
+
+expr3 = expr2 '(' arguments ')'
+      | expr2 '[' expr ']'
+      | expr2
+
+expr2 = expr1 '.' ident
+      | expr0
+
+expr0 = ident
+      | number
+      | function-literal
+      | type-literal
+
+function-literal = '(' ( parameter ( ',' parameter )* ) ? ')' returns block
+
+parameter = ident ':' expr
+
+returns = ( '->' expr ) ?
+
+block = '{' stmt* '}'
+
+type-literal = struct-type
+             | enum-type
+             | function-type
+
+function-type = '(' ( parameter ( ',' parameter )* ) ? ')' returns
+              | '(' ( expr ( ',' expr )* ) ? ')' returns
+
+struct-type = 'struct' '{' decl* '}'
+
+enum-type = 'enum' '{' const-decl* '}'
