@@ -573,6 +573,26 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
     Token *current = ctx->tokens.data;
     Token *start_section = current;
     
+    auto skip_to_semicolon = [&]() {
+        while(true)
+        {
+            if(current->type == Token_Type::eof)
+            {
+                break;
+            }
+            else if(current->type == Token_Type::semicolon)
+            {
+                ++current;
+                break;
+            }
+            else
+            {
+                ++current;
+            }
+        }
+        start_section = current;
+    };
+    
     while(current->type != Token_Type::eof)
     {
         if(current->type == Token_Type::ident)
@@ -597,7 +617,8 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
                 }
                 else
                 {
-                    break;
+                    skip_to_semicolon();
+                    continue;
                 }
                 
                 if(current->type == Token_Type::equal)
@@ -611,7 +632,8 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
                     }
                     else
                     {
-                        break;
+                        skip_to_semicolon();
+                        continue;
                     }
                     if(current->type == Token_Type::semicolon)
                     {
@@ -622,12 +644,15 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
                     else
                     {
                         report_error(ctx, start_section, current, "Expected ';' after declaration");
+                        skip_to_semicolon();
+                        continue;
                     }
                 }
                 else
                 {
                     report_error(ctx, start_section, current, "Declaration with no value. Expected '='");
-                    break;
+                    skip_to_semicolon();
+                    continue;
                 }
             }
             else if(current->type == Token_Type::double_colon)
@@ -636,7 +661,8 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
                 ++current;
                 new_ast.decl_type = nullptr;
                 
-                break;
+                skip_to_semicolon();
+                continue;
             }
             else if(current->type == Token_Type::colon_eq)
             {
@@ -644,20 +670,21 @@ Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
                 ++current;
                 new_ast.decl_type = nullptr;
                 
-                break;
+                skip_to_semicolon();
+                continue;
             }
             else
             {
                 report_error(ctx, start_section, current, "Expected ':=', or '::' to make a declaration");
-                break;
+                skip_to_semicolon();
+                continue;
             }
         }
         else
         {
             report_error(ctx, start_section, current, "Expected a top-level declaration");
             // TODO: could skip to semicolon for a better recovery
-            ++current;
-            start_section = current;
+            skip_to_semicolon();
         }
     }
     
