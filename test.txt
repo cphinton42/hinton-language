@@ -22,3 +22,17 @@ id5 : u32 = func(bar)[10 + 10].member + 10;
 func : F = (param1 : T1, param2 : T2) {};
 
 func2 : F2 = () -> u32 {};
+
+func3 : F2 = () -> u32 {
+    while true {
+       func2(hello);
+    }
+
+    if 10 + 10 {
+        expr + 42;
+    }
+    else
+    {
+        func(a); /* we can only call functions that take one argument */
+    }
+};

@@ -21,6 +21,9 @@ enum class AST_Type : u32
     function_ast,
     binary_operator_ast,
     number_ast,
+    while_ast,
+    for_ast,
+    if_ast,
 };
 
 struct AST
@@ -99,6 +102,24 @@ struct Binary_Operator_AST : AST
     Binary_Operator op;
     AST *lhs;
     AST *rhs;
+};
+
+struct While_AST : AST
+{
+    AST *guard;
+    Block_AST *body;
+};
+
+struct For_AST : AST
+{
+    Block_AST *body;
+};
+
+struct If_AST : AST
+{
+    AST *guard;
+    Block_AST *then_block;
+    Block_AST *else_block;
 };
 
 void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size);

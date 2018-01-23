@@ -110,6 +110,7 @@ internal Number_AST make_number_ast(Token number)
 }
 
 
+internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr);
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
 internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr);
 internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence = 3)
@@ -526,6 +527,115 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
     return result;
 }
 
+internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
+{
+    Token *current = *current_ptr;
+    Token *start_section = current;
+    AST *result = nullptr;
+    bool require_semicolon = false;
+    
+    u32 line_number = current->line_number;
+    u32 line_offset = current->line_offset;
+    
+    if(current->type == Token_Type::key_for)
+    {
+        ++current;
+        // TODO
+        report_error(ctx, start_section, current, "for statements not yet implemented");
+    }
+    else if(current->type == Token_Type::key_if)
+    {
+        ++current;
+        AST *expr = parse_expr(ctx, &current);
+        if(!expr)
+        {
+            return nullptr;
+        }
+        Block_AST *then_block = parse_statement_block(ctx, &current);
+        if(!then_block)
+        {
+            return nullptr;
+        }
+        
+        Block_AST *else_block = nullptr;
+        
+        if(current->type == Token_Type::key_else)
+        {
+            ++current;
+            else_block = parse_statement_block(ctx, &current);
+            if(!else_block)
+            {
+                return nullptr;
+            }
+        }
+        
+        If_AST *if_ast = pool_alloc(If_AST, &ctx->ast_pool, 1);
+        if_ast->type = AST_Type::if_ast;
+        if_ast->flags = 0;
+        if_ast->line_number = line_number;
+        if_ast->line_offset = line_offset;
+        
+        if_ast->guard = expr;
+        if_ast->then_block = then_block;
+        if_ast->else_block = else_block;
+        
+        result = if_ast;
+    }
+    else if(current->type == Token_Type::key_while)
+    {
+        ++current;
+        AST *expr = parse_expr(ctx, &current);
+        if(!expr)
+        {
+            return nullptr;
+        }
+        Block_AST *body = parse_statement_block(ctx, &current);
+        
+        While_AST *while_ast = pool_alloc(While_AST, &ctx->ast_pool, 1);
+        while_ast->type = AST_Type::while_ast;
+        while_ast->flags = 0;
+        while_ast->line_number = line_number;
+        while_ast->line_offset = line_offset;
+        
+        while_ast->guard = expr;
+        while_ast->body = body;
+        
+        result = while_ast;
+    }
+    else if(current->type == Token_Type::open_brace)
+    {
+        result = parse_statement_block(ctx, &current);
+    }
+    else
+    {
+        require_semicolon = true;
+        AST *expr = parse_expr(ctx, &current);
+        if(!expr)
+        {
+            return nullptr;
+        }
+        result = expr;
+    }
+    
+    if(require_semicolon)
+    {
+        if(current->type == Token_Type::semicolon)
+        {
+            ++current;
+        }
+        else
+        {
+            report_error(ctx, start_section, current, "Expected ';'");
+        }
+    }
+    
+    if(result)
+    {
+        *current_ptr = current;
+    }
+    return result;
+}
+
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr)
 {
     Token *current = *current_ptr;
@@ -546,16 +656,9 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
         // TODO: memory leak
         Dynamic_Array<AST*> statements = {0};
         
-        // TODO: parse statements
         while(true)
         {
-            if(current->type == Token_Type::key_for)
-            {
-            }
-            else if(current->type == Token_Type::key_if)
-            {
-            }
-            else if(current->type == Token_Type::close_brace)
+            if(current->type == Token_Type::close_brace)
             {
                 ++current;
                 
@@ -567,6 +670,18 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
                     result->statements[i] = statements[i];
                 }
                 break;
+            }
+            else
+            {
+                AST *stmt = parse_statement(ctx, &current);
+                if(stmt)
+                {
+                    array_add(&statements, stmt);
+                }
+                else
+                {
+                    return nullptr;
+                }
             }
         }
     }
@@ -785,6 +900,29 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
         case AST_Type::number_ast: {
             Number_AST *number_ast = static_cast<Number_AST*>(ast);
             print_buf(pb, "n%ld[label=\"%.*s\"];\n", (*serial)++, (u32)number_ast->literal.count, number_ast->literal.data);
+        } break;
+        case AST_Type::while_ast: {
+            While_AST *while_ast = static_cast<While_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"while\"];\n", this_serial);
+            print_dot_child(pb, while_ast->guard, this_serial, serial);
+            print_dot_child(pb, while_ast->body, this_serial, serial);
+        } break;
+        // TODO: print for_ast
+        case AST_Type::if_ast: {
+            If_AST *if_ast = static_cast<If_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"if\"];\n", this_serial);
+            print_dot_child(pb, if_ast->guard, this_serial, serial);
+            print_dot_child(pb, if_ast->then_block, this_serial, serial);
+            if(if_ast->else_block)
+            {
+                print_dot_child(pb, if_ast->else_block, this_serial, serial);
+            }
         } break;
         default: {
             print_err("Unknown AST type in dot printer\n");
