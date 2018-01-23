@@ -229,11 +229,13 @@ Dynamic_Array<Token> lex_string(String file_contents)
                     str_lit("enum"),
                     str_lit("for"),
                     str_lit("struct"),
+                    str_lit("while"),
                 };
                 Token_Type key_types[] = {
                     Token_Type::key_enum,
                     Token_Type::key_for,
-                    Token_Type::key_struct
+                    Token_Type::key_struct,
+                    Token_Type::key_while,
                 };
                 
                 for(u64 i = 0; i < static_array_size(keywords); ++i)
