@@ -224,25 +224,14 @@ Dynamic_Array<Token> lex_string(String file_contents)
                 String contents = make_array(len, start);
                 Token_Type type = Token_Type::ident;
                 
-                // Easiest way to do keywords right now
-                String keywords[] = {
-                    str_lit("enum"),
-                    str_lit("for"),
-                    str_lit("struct"),
-                    str_lit("while"),
-                };
-                Token_Type key_types[] = {
-                    Token_Type::key_enum,
-                    Token_Type::key_for,
-                    Token_Type::key_struct,
-                    Token_Type::key_while,
-                };
+                u64 begin = (u64)Token_Type::keywords_begin;
+                u64 end = ((u64)Token_Type::keywords_last) + 1;
                 
-                for(u64 i = 0; i < static_array_size(keywords); ++i)
+                for(u64 i = begin; i != end; ++i)
                 {
-                    if(contents == keywords[i])
+                    if(contents == token_type_names[i])
                     {
-                        type = key_types[i];
+                        type = (Token_Type)i;
                         break;
                     }
                 }

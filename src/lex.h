@@ -5,11 +5,16 @@ enum class Token_Type : u64
 {
     ident,
     number,
+    
     key_enum,
     key_for,
     key_if,
+    key_else,
     key_struct,
     key_while,
+    
+    keywords_begin = key_enum,
+    keywords_last = key_while,
     
     comma,
     semicolon,
@@ -43,43 +48,49 @@ enum class Token_Type : u64
     eof,
 };
 
-const byte *token_type_names[] = {
-    "identifier",
-    "number",
-    "enum",
-    "for",
-    "if",
-    "struct",
-    "while",
-    ",",
-    ";",
-    ":",
-    ":=",
-    "::",
-    ".",
-    "->",
-    "(",
-    ")",
-    "[",
-    "]",
-    "{",
-    "}",
-    "*",
-    "+",
-    "-",
-    "|",
-    "||",
-    "&",
-    "&&",
-    "/",
-    "=",
-    "==",
-    "*=",
-    "+=",
-    "-=",
-    "/=",
-    "EOF"
+#define FOR_TOKEN_NAME(X) \
+X("identifier") \
+X("number") \
+X("enum") \
+X("for") \
+X("if") \
+X("else") \
+X("struct") \
+X("while") \
+X(",") \
+X(";") \
+X(":") \
+X(":=") \
+X("::") \
+X(".") \
+X("->") \
+X("(") \
+X(")") \
+X("[") \
+X("]") \
+X("{") \
+X("}") \
+X("*") \
+X("+") \
+X("-") \
+X("|") \
+X("||") \
+X("&") \
+X("&&") \
+X("/") \
+X("=") \
+X("==") \
+X("*=") \
+X("+=") \
+X("-=") \
+X("/=") \
+X("EOF")
+
+#define X(s) str_lit(s),
+String token_type_names[] = {
+    FOR_TOKEN_NAME(X)
 };
+
 
 struct Token
 {
