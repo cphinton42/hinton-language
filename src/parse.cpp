@@ -109,10 +109,11 @@ internal Number_AST make_number_ast(Token number)
     return result;
 }
 
-
+internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr);
 internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr);
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
 internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr);
+
 internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence = 3)
 {
     Token *current = *current_ptr;
@@ -325,7 +326,6 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
     Token *start_section = current;
     AST *result = nullptr;
     
-    // TODO: lambdas/function literals ?
     if(current->type == Token_Type::ident)
     {
         Ident_AST *result_ident = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
@@ -451,10 +451,6 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         
         if(expect_func)
         {
-            // TODO review code here
-            // TODO: parse return type here, if expect_func_body
-            // TODO: parse block here, if expect_func_body
-            
             AST *return_type = nullptr;
             
             if(current->type == Token_Type::arrow)
@@ -608,13 +604,49 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
     }
     else
     {
-        require_semicolon = true;
-        AST *expr = parse_expr(ctx, &current);
-        if(!expr)
+        // Expect an expression or declaration
+        
+        if(current->type == Token_Type::ident)
         {
-            return nullptr;
+            Token *at_ident = current;
+            ++current;
+            if(current->type == Token_Type::colon ||
+               current->type == Token_Type::colon_eq ||
+               current->type == Token_Type::double_colon)
+            {
+                // Expect a declaration
+                current = at_ident;
+                Decl_AST *decl = parse_decl(ctx, &current);
+                if(!decl)
+                {
+                    return nullptr;
+                }
+                result = decl;
+            }
+            else
+            {
+                // Expect an expression;
+                current = at_ident;
+                AST *expr = parse_expr(ctx, &current);
+                if(!expr)
+                {
+                    return nullptr;
+                }
+                result = expr;
+                require_semicolon = true;
+            }
         }
-        result = expr;
+        else
+        {
+            // Expect an expression;
+            AST *expr = parse_expr(ctx, &current);
+            if(!expr)
+            {
+                return nullptr;
+            }
+            result = expr;
+            require_semicolon = true;
+        }
     }
     
     if(require_semicolon)
@@ -697,126 +729,126 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     return result;
 }
 
-
-Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx)
+Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr)
 {
-    Dynamic_Array<Decl_AST> result = {0};
+    Token *current = *current_ptr;
+    Token *start_section = current;
+    Decl_AST *result = nullptr;
+    
+    u32 line_number = current->line_number;
+    u32 line_offset = current->line_offset;
+    
+    if(current->type == Token_Type::ident)
+    {
+        Token *ident_tok = current;
+        ++current;
+        AST *type = nullptr;
+        
+        if(current->type == Token_Type::colon)
+        {
+            ++current;
+            type = parse_expr(ctx, &current);
+            if(!type)
+            {
+                return nullptr;
+            }
+            
+            if(current->type == Token_Type::equal)
+            {
+                ++current;
+            }
+            else
+            {
+                report_error(ctx, start_section, current, "Expected '='");
+                return nullptr;
+            }
+        }
+        else if(current->type == Token_Type::colon_eq)
+        {
+            ++current;
+        }
+        else if(current->type == Token_Type::double_colon)
+        {
+            ++current;
+            // TODO: indicate this should be a constant
+        }
+        else
+        {
+            report_error(ctx, start_section, current, "Expected ':', ':=', or '::'");
+            return nullptr;
+        }
+        
+        AST *expr = parse_expr(ctx, &current);
+        if(!expr)
+        {
+            return nullptr;
+        }
+        
+        if(current->type == Token_Type::semicolon)
+        {
+            ++current;
+        }
+        else
+        {
+            report_error(ctx, start_section, current, "Expected ';'");
+            return nullptr;
+        }
+        
+        result = pool_alloc(Decl_AST, &ctx->ast_pool, 1);
+        result->type = AST_Type::decl_ast;
+        result->flags = 0;
+        result->line_number = line_number;
+        result->line_offset = line_offset;
+        result->ident = make_ident_ast(*ident_tok);
+        result->decl_type = type;
+        result->expr = expr;
+    }
+    else
+    {
+        report_error(ctx, start_section, current, "Expected identifier");
+    }
+    
+    if(result)
+    {
+        *current_ptr = current;
+    }
+    return result;
+}
+
+
+Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx)
+{
+    Dynamic_Array<Decl_AST*> result = {0};
     
     Token *current = ctx->tokens.data;
     Token *start_section = current;
     
-    auto skip_to_semicolon = [&]() {
-        while(true)
-        {
-            if(current->type == Token_Type::eof)
-            {
-                break;
-            }
-            else if(current->type == Token_Type::semicolon)
-            {
-                ++current;
-                break;
-            }
-            else
-            {
-                ++current;
-            }
-        }
-        start_section = current;
-    };
-    
     while(current->type != Token_Type::eof)
     {
-        if(current->type == Token_Type::ident)
+        start_section = current;
+        Decl_AST *decl = parse_decl(ctx, &current);
+        if(decl)
         {
-            Decl_AST new_ast;
-            zero_struct(&new_ast);
-            new_ast.type = AST_Type::decl_ast;
-            new_ast.line_number = current->line_number;
-            new_ast.line_offset = current->line_offset;
-            new_ast.ident = make_ident_ast(*current);
-            
-            ++current;
-            
-            if(current->type == Token_Type::colon)
-            {
-                ++current;
-                
-                AST *type = parse_expr(ctx, &current);
-                if(type)
-                {
-                    new_ast.decl_type = type;
-                }
-                else
-                {
-                    skip_to_semicolon();
-                    continue;
-                }
-                
-                if(current->type == Token_Type::equal)
-                {
-                    ++current;
-                    
-                    AST *expr = parse_expr(ctx, &current);
-                    if(expr)
-                    {
-                        new_ast.expr = expr;
-                    }
-                    else
-                    {
-                        skip_to_semicolon();
-                        continue;
-                    }
-                    if(current->type == Token_Type::semicolon)
-                    {
-                        ++current;
-                        array_add(&result, new_ast);
-                        start_section = current;
-                    }
-                    else
-                    {
-                        report_error(ctx, start_section, current, "Expected ';' after declaration");
-                        skip_to_semicolon();
-                        continue;
-                    }
-                }
-                else
-                {
-                    report_error(ctx, start_section, current, "Declaration with no value. Expected '='");
-                    skip_to_semicolon();
-                    continue;
-                }
-            }
-            else if(current->type == Token_Type::double_colon)
-            {
-                report_error(ctx, start_section, current, "Not yet implemented, type is required");
-                ++current;
-                new_ast.decl_type = nullptr;
-                
-                skip_to_semicolon();
-                continue;
-            }
-            else if(current->type == Token_Type::colon_eq)
-            {
-                report_error(ctx, start_section, current, "Not yet implemented, type is required");
-                ++current;
-                new_ast.decl_type = nullptr;
-                
-                skip_to_semicolon();
-                continue;
-            }
-            else
-            {
-                report_error(ctx, start_section, current, "Expected ':=', or '::' to make a declaration");
-                skip_to_semicolon();
-                continue;
-            }
+            array_add(&result, decl);
         }
         else
         {
-            report_error(ctx, start_section, current, "Expected a top-level declaration");
-            // TODO: could skip to semicolon for a better recovery
-            skip_to_semicolon();
+            while(true)
+            {
+                if(current->type == Token_Type::eof)
+                {
+                    break;
+                }
+                else if(current->type == Token_Type::semicolon)
+                {
+                    ++current;
+                    break;
+                }
+                else
+                {
+                    ++current;
+                }
+            }
         }
     }
     
@@ -930,14 +962,14 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
     }
 }
 
-void print_dot(Print_Buffer *pb, Array<Decl_AST> decls)
+void print_dot(Print_Buffer *pb, Array<Decl_AST*> decls)
 {
     print_buf(pb, "digraph decls {\n");
     
     u64 s = 0;
     for(u64 i = 0; i < decls.count; ++i)
     {
-        print_dot_rec(pb, &decls[i], &s);
+        print_dot_rec(pb, decls[i], &s);
     }
     
     print_buf(pb, "}\n");

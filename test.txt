@@ -28,6 +28,14 @@ func3 : F2 = () -> u32 {
        func2(hello);
     }
 
+	var := 10;
+	const :: 42;
+	other : u32 = 0;
+
+	inner_func :: (param1 : T1, parma2 : T2) {
+		ok;
+	};
+
     if 10 + 10 {
         expr + 42;
     }

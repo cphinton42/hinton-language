@@ -124,7 +124,7 @@ struct If_AST : AST
 
 void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size);
 
-Dynamic_Array<Decl_AST> parse_tokens(Parsing_Context *ctx);
-void print_dot(Print_Buffer *pb, Array<Decl_AST> decls);
+Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx);
+void print_dot(Print_Buffer *pb, Array<Decl_AST*> decls);
 
 #endif // PARSE_H
