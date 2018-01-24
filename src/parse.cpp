@@ -118,6 +118,9 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
 {
     Token *current = *current_ptr;
     Token *start_section = current;
+    defer {
+        *current_ptr = current;
+    };
     
     AST *lhs = parse_base_expr(ctx, &current);
     if(!lhs)
@@ -314,7 +317,6 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
         }
         else
         {
-            *current_ptr = current;
             return lhs;
         }
     }
@@ -325,6 +327,9 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
     Token *current = *current_ptr;
     Token *start_section = current;
     AST *result = nullptr;
+    defer {
+        *current_ptr = current;
+    };
     
     if(current->type == Token_Type::ident)
     {
@@ -512,11 +517,7 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         ++current;
     }
     
-    if(result)
-    {
-        *current_ptr = current;
-    }
-    else
+    if(!result)
     {
         report_error(ctx, start_section, current, "Expected expression");
     }
@@ -528,6 +529,10 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
     Token *current = *current_ptr;
     Token *start_section = current;
     AST *result = nullptr;
+    defer {
+        *current_ptr = current;
+    };
+    
     bool require_semicolon = false;
     
     u32 line_number = current->line_number;
@@ -661,10 +666,6 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
         }
     }
     
-    if(result)
-    {
-        *current_ptr = current;
-    }
     return result;
 }
 
@@ -673,6 +674,9 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     Token *current = *current_ptr;
     Token *start_section = current;
     Block_AST *result = nullptr;
+    defer {
+        *current_ptr = current;
+    };
     
     if(current->type == Token_Type::open_brace)
     {
@@ -722,10 +726,6 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
         report_error(ctx, start_section, current, "Expected '{' to begin statement block");
     }
     
-    if(result)
-    {
-        *current_ptr = current;
-    }
     return result;
 }
 
@@ -734,6 +734,9 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr)
     Token *current = *current_ptr;
     Token *start_section = current;
     Decl_AST *result = nullptr;
+    defer {
+        *current_ptr = current;
+    };
     
     u32 line_number = current->line_number;
     u32 line_offset = current->line_offset;
@@ -805,13 +808,9 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr)
     }
     else
     {
-        report_error(ctx, start_section, current, "Expected identifier");
+        report_error(ctx, start_section, current, "Expected identifier to begin declaration");
     }
     
-    if(result)
-    {
-        *current_ptr = current;
-    }
     return result;
 }
 
