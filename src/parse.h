@@ -19,6 +19,7 @@ enum class AST_Type : u32
     block_ast,
     function_type_ast,
     function_ast,
+    function_call_ast,
     binary_operator_ast,
     number_ast,
     while_ast,
@@ -83,7 +84,6 @@ enum class Binary_Operator : u64
     sub,
     mul,
     div,
-    call,
     subscript,
 };
 
@@ -93,7 +93,6 @@ const byte *binary_operator_names[] = {
     "-",
     "*",
     "/",
-    "()",
     "[]",
 };
 
@@ -102,6 +101,12 @@ struct Binary_Operator_AST : AST
     Binary_Operator op;
     AST *lhs;
     AST *rhs;
+};
+
+struct Function_Call_AST : AST
+{
+    AST *function;
+    Array<AST*> args;
 };
 
 struct While_AST : AST

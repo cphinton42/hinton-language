@@ -1,11 +1,10 @@
 // This is an EOL comment
-/*     /= /**/ /////// ******/
 /* This is a multi-line comment
 */
 /*
 	Comments
 	/*
-	 Can be nested /= / / / /
+	 Can be nested
 //	*/
 */
 
@@ -27,6 +26,8 @@ func3 : F2 = () -> u32 {
     while true {
        func2(hello);
     }
+
+	test_precedence(10, 10)(ident)();
 
 	var := 10;
 	const :: 42;

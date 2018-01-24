@@ -169,41 +169,63 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
             case 1:
             if(current->type == Token_Type::open_paren)
             {
-                op = Binary_Operator::call;
-                
                 ++current;
-                AST *rhs = parse_expr(ctx, &current);
-                if(rhs)
+                
+                Dynamic_Array<AST*> args = {0};
+                
+                if(current->type != Token_Type::eof && current->type != Token_Type::close_paren)
                 {
-                    if(current->type == Token_Type::close_paren)
+                    AST *first_expr = parse_expr(ctx, &current);
+                    if(!first_expr)
                     {
-                        ++current;
-                        
-                        Binary_Operator_AST *result = pool_alloc(Binary_Operator_AST, &ctx->ast_pool, 1);
-                        result->type = AST_Type::binary_operator_ast;
-                        result->flags = 0;
-                        result->line_number = lhs->line_number;
-                        result->line_offset = lhs->line_offset;
-                        result->op = op;
-                        result->lhs = lhs;
-                        result->rhs = rhs;
-                        
-                        lhs = result;
-                        
-                        continue;
-                    }
-                    else
-                    {
-                        report_error(ctx, start_section, current, "Expected ')'");
                         return nullptr;
                     }
-                }
-                else
-                {
-                    return nullptr;
+                    array_add(&args, first_expr);
                 }
                 
-                break;
+                while(current->type != Token_Type::eof && current->type != Token_Type::close_paren)
+                {
+                    if(current->type != Token_Type::comma)
+                    {
+                        report_error(ctx, start_section, current, "Expected ','");
+                        return nullptr;
+                    }
+                    ++current;
+                    
+                    AST *expr = parse_expr(ctx, &current);
+                    if(!expr)
+                    {
+                        return nullptr;
+                    }
+                    array_add(&args, expr);
+                }
+                if(current->type != Token_Type::close_paren)
+                {
+                    report_error(ctx, start_section, current, "Expected ')'");
+                    return nullptr;
+                }
+                ++current;
+                
+                Function_Call_AST *call_ast = pool_alloc(Function_Call_AST, &ctx->ast_pool, 1);
+                call_ast->type = AST_Type::function_call_ast;
+                call_ast->flags = 0;
+                call_ast->line_number = lhs->line_number;
+                call_ast->line_offset = lhs->line_offset;
+                
+                call_ast->function = lhs;
+                
+                call_ast->args.count = args.count;
+                call_ast->args.data = pool_alloc(AST*, &ctx->ast_pool, args.count);
+                
+                for(u64 i = 0; i < args.count; ++i)
+                {
+                    call_ast->args[i] = args[i];
+                }
+                
+                // TODO memory leak
+                lhs = call_ast;
+                
+                continue;
             }
             if(current->type == Token_Type::open_sqr)
             {
@@ -919,6 +941,17 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
                 print_dot_child(pb, function_ast->param_names[i], this_serial, serial);
             }
             print_dot_child(pb, function_ast->block, this_serial, serial);
+        } break;
+        case AST_Type::function_call_ast: {
+            Function_Call_AST *call_ast = static_cast<Function_Call_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            print_buf(pb, "n%ld[label=\"function call\"];\n", this_serial);
+            print_dot_child(pb, call_ast->function, this_serial, serial);
+            for(u64 i = 0; i < call_ast->args.count; ++i)
+            {
+                print_dot_child(pb, call_ast->args[i], this_serial, serial);
+            }
         } break;
         case AST_Type::binary_operator_ast: {
             Binary_Operator_AST *bin_ast = static_cast<Binary_Operator_AST*>(ast);
