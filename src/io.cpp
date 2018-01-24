@@ -16,13 +16,15 @@ String read_entire_file(const byte *file_name)
     {
         return result;
     }
+    defer {
+        close(fd);
+    };
     
     struct stat file_info;
     
     int status = fstat(fd, &file_info);
     if(status < 0)
     {
-        close(fd);
         return result;
     }
     
@@ -31,14 +33,12 @@ String read_entire_file(const byte *file_name)
     byte *memory = mem_alloc(byte, len+1);
     if(!memory)
     {
-        close(fd);
         return result;
     }
     
     u64 bytes_read = read(fd, memory, len);
     if(bytes_read < len)
     {
-        close(fd);
         mem_dealloc(memory, len+1);
         return result;
     }
@@ -47,7 +47,6 @@ String read_entire_file(const byte *file_name)
     result.data = memory;
     result[len] = '\0';
     
-    close(fd);
     return result;
 }
 

@@ -64,6 +64,9 @@ internal inline void *mem_alloc_(u64 size);
 internal inline void *mem_resize_(void *old_ptr, u64 old_size, u64 new_size);
 internal inline void mem_dealloc_(void *ptr, u64 size);
 
+#define defer \
+auto ANONYMOUS_VARIABLE(DEFER_TO_EXIT) = Defer_To_Exit() + [&]()
+
 
 template <typename T>
 struct Dynamic_Array
@@ -217,6 +220,24 @@ void array_add(Dynamic_Array<T> *arr, T element)
     
     (*arr)[arr->count] = element;
     ++arr->count;
+}
+
+// Defer implementation
+template<typename Fn>
+struct Deferred_Lambda
+{
+    Deferred_Lambda(Fn &&fn) : fn(static_cast<Fn&&>(fn)) {};
+    ~Deferred_Lambda() { fn(); }
+    
+    Fn fn;
+};
+
+enum class Defer_To_Exit {};
+
+template<typename Fn>
+Deferred_Lambda<Fn> operator+(Defer_To_Exit, Fn&& fn)
+{
+    return Deferred_Lambda<Fn>(static_cast<Fn&&>(fn));
 }
 
 #endif // BASIC_H
