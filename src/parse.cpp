@@ -109,7 +109,7 @@ internal Number_AST make_number_ast(Token number)
     return result;
 }
 
-internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_value = true);
+internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_value = true, bool require_constant = false);
 internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr);
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
 internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr);
@@ -377,12 +377,11 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         
         while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
         {
-            Decl_AST *decl = parse_decl(ctx, &current);
+            Decl_AST *decl = parse_decl(ctx, &current, true, true);
             if(!decl)
             {
                 return nullptr;
             }
-            // TODO: ensure declaration is constant
             array_add(&values, decl);
         }
         
@@ -421,6 +420,9 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         }
         ++current;
         
+        u64 var_count = 0;
+        u64 const_count = 0;
+        
         while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
         {
             Decl_AST *decl = parse_decl(ctx, &current, false);
@@ -428,7 +430,14 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
             {
                 return nullptr;
             }
-            // TODO: count constant vs variable declarations
+            if(decl->flags & DECL_FLAG_CONSTANT)
+            {
+                ++const_count;
+            }
+            else
+            {
+                ++var_count;
+            }
             array_add(&decls, decl);
         }
         
@@ -444,11 +453,26 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         struct_ast->flags = 0;
         struct_ast->line_number = line_number;
         struct_ast->line_offset = line_offset;
-        struct_ast->fields.count = decls.count;
-        struct_ast->fields.data = pool_alloc(Decl_AST*, &ctx->ast_pool, decls.count);
+        
+        struct_ast->constants.count = const_count;
+        struct_ast->fields.count = var_count;
+        struct_ast->constants.data = pool_alloc(Decl_AST*, &ctx->ast_pool, const_count);
+        struct_ast->fields.data = pool_alloc(Decl_AST*, &ctx->ast_pool, var_count);
+        
+        u64 const_i = 0;
+        u64 var_i = 0;
+        
         for(u64 i = 0; i < decls.count; ++i)
         {
-            struct_ast->fields[i] = decls[i];
+            Decl_AST *decl = decls[i];
+            if(decl->flags & DECL_FLAG_CONSTANT)
+            {
+                struct_ast->constants[const_i++] = decl;
+            }
+            else
+            {
+                struct_ast->fields[var_i++] = decl;
+            }
         }
         result = struct_ast;
     }
@@ -843,7 +867,7 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     return result;
 }
 
-Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_value)
+Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_value, bool require_constant)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -861,8 +885,9 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_val
         ++current;
         AST *type = nullptr;
         bool expect_expr = require_value;
+        bool is_constant = false;
         
-        if(current->type == Token_Type::colon)
+        if(current->type == Token_Type::colon && !require_constant)
         {
             ++current;
             type = parse_expr(ctx, &current);
@@ -882,7 +907,7 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_val
                 return nullptr;
             }
         }
-        else if(current->type == Token_Type::colon_eq)
+        else if(current->type == Token_Type::colon_eq && !require_constant)
         {
             ++current;
             expect_expr = true;
@@ -891,11 +916,19 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_val
         {
             ++current;
             expect_expr = true;
+            is_constant = true;
             // TODO: indicate this should be a constant
         }
         else
         {
-            report_error(ctx, start_section, current, "Expected ':', ':=', or '::'");
+            if(require_constant)
+            {
+                report_error(ctx, start_section, current, "Expected '::'");
+            }
+            else
+            {
+                report_error(ctx, start_section, current, "Expected ':', ':=', or '::'");
+            }
             return nullptr;
         }
         
@@ -933,6 +966,11 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_val
         result->ident = make_ident_ast(*ident_tok);
         result->decl_type = type;
         result->expr = expr;
+        
+        if(is_constant)
+        {
+            result->flags |= DECL_FLAG_CONSTANT;
+        }
     }
     else
     {

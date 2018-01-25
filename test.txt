@@ -46,8 +46,16 @@ func3 : F2 = () -> u32 {
     }
 };
 
-data :: struct {
+data_type :: struct {
     field1 : u32 = 0;
+	const1 :: 10;
 	field2 : s32 = 10;
+	const2 :: 22;
 	field3 : u8;
+};
+
+thing :: enum {
+	const1 :: 1;
+	const2 :: 2;
+	const3 :: 3;
 };

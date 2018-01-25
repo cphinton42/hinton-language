@@ -29,6 +29,8 @@ enum class AST_Type : u32
     struct_ast,
 };
 
+constexpr u32 DECL_FLAG_CONSTANT = 1;
+
 struct AST
 {
     AST_Type type;
