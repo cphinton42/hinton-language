@@ -45,3 +45,9 @@ func3 : F2 = () -> u32 {
         func(a); /* we can only call functions that take one argument */
     }
 };
+
+data :: struct {
+    field1 : u32 = 0;
+	field2 : s32 = 10;
+	field3 : u8;
+};

@@ -25,6 +25,8 @@ enum class AST_Type : u32
     while_ast,
     for_ast,
     if_ast,
+    enum_ast,
+    struct_ast,
 };
 
 struct AST
@@ -126,6 +128,18 @@ struct If_AST : AST
     Block_AST *then_block;
     Block_AST *else_block;
 };
+
+struct Struct_AST : AST
+{
+    Array<Decl_AST*> constants;
+    Array<Decl_AST*> fields;
+};
+
+struct Enum_AST : AST
+{
+    Array<Decl_AST*> values;
+};
+
 
 void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size);
 

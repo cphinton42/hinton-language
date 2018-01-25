@@ -109,7 +109,7 @@ internal Number_AST make_number_ast(Token number)
     return result;
 }
 
-internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr);
+internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_value = true);
 internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr);
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
 internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr);
@@ -359,6 +359,98 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         *result_ident = make_ident_ast(*current);
         result = result_ident;
         ++current;
+    }
+    else if(current->type == Token_Type::key_enum)
+    {
+        u32 line_number = current->line_number;
+        u32 line_offset = current->line_offset;
+        
+        ++current;
+        Dynamic_Array<Decl_AST*> values = {0};
+        
+        if(current->type != Token_Type::open_brace)
+        {
+            report_error(ctx, start_section, current, "Expected '{'");
+            return nullptr;
+        }
+        ++current;
+        
+        while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
+        {
+            Decl_AST *decl = parse_decl(ctx, &current);
+            if(!decl)
+            {
+                return nullptr;
+            }
+            // TODO: ensure declaration is constant
+            array_add(&values, decl);
+        }
+        
+        if(current->type != Token_Type::close_brace)
+        {
+            report_error(ctx, start_section, current, "Expected '}'");
+            return nullptr;
+        }
+        ++current;
+        
+        Enum_AST *enum_ast = pool_alloc(Enum_AST, &ctx->ast_pool, 1);
+        enum_ast->type = AST_Type::enum_ast;
+        enum_ast->flags = 0;
+        enum_ast->line_number = line_number;
+        enum_ast->line_offset = line_offset;
+        enum_ast->values.count = values.count;
+        enum_ast->values.data = pool_alloc(Decl_AST*, &ctx->ast_pool, values.count);
+        for(u64 i = 0; i < values.count; ++i)
+        {
+            enum_ast->values[i] = values[i];
+        }
+        result = enum_ast;
+    }
+    else if(current->type == Token_Type::key_struct)
+    {
+        u32 line_number = current->line_number;
+        u32 line_offset = current->line_offset;
+        
+        ++current;
+        Dynamic_Array<Decl_AST*> decls = {0};
+        
+        if(current->type != Token_Type::open_brace)
+        {
+            report_error(ctx, start_section, current, "Expected '{'");
+            return nullptr;
+        }
+        ++current;
+        
+        while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
+        {
+            Decl_AST *decl = parse_decl(ctx, &current, false);
+            if(!decl)
+            {
+                return nullptr;
+            }
+            // TODO: count constant vs variable declarations
+            array_add(&decls, decl);
+        }
+        
+        if(current->type != Token_Type::close_brace)
+        {
+            report_error(ctx, start_section, current, "Expected '}'");
+            return nullptr;
+        }
+        ++current;
+        
+        Struct_AST *struct_ast = pool_alloc(Struct_AST, &ctx->ast_pool, 1);
+        struct_ast->type = AST_Type::struct_ast;
+        struct_ast->flags = 0;
+        struct_ast->line_number = line_number;
+        struct_ast->line_offset = line_offset;
+        struct_ast->fields.count = decls.count;
+        struct_ast->fields.data = pool_alloc(Decl_AST*, &ctx->ast_pool, decls.count);
+        for(u64 i = 0; i < decls.count; ++i)
+        {
+            struct_ast->fields[i] = decls[i];
+        }
+        result = struct_ast;
     }
     else if(current->type == Token_Type::open_paren)
     {
@@ -751,7 +843,7 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     return result;
 }
 
-Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr)
+Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_value)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -768,6 +860,7 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr)
         Token *ident_tok = current;
         ++current;
         AST *type = nullptr;
+        bool expect_expr = require_value;
         
         if(current->type == Token_Type::colon)
         {
@@ -781,8 +874,9 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr)
             if(current->type == Token_Type::equal)
             {
                 ++current;
+                expect_expr = true;
             }
-            else
+            else if(require_value)
             {
                 report_error(ctx, start_section, current, "Expected '='");
                 return nullptr;
@@ -791,10 +885,12 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr)
         else if(current->type == Token_Type::colon_eq)
         {
             ++current;
+            expect_expr = true;
         }
         else if(current->type == Token_Type::double_colon)
         {
             ++current;
+            expect_expr = true;
             // TODO: indicate this should be a constant
         }
         else
@@ -803,10 +899,20 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr)
             return nullptr;
         }
         
-        AST *expr = parse_expr(ctx, &current);
-        if(!expr)
+        AST *expr = nullptr;
+        
+        if(expect_expr)
         {
-            return nullptr;
+            if(current->type == Token_Type::semicolon)
+            {
+                report_error(ctx, start_section, current, "Expected expression");
+                return nullptr;
+            }
+            expr = parse_expr(ctx, &current);
+            if(!expr)
+            {
+                return nullptr;
+            }
         }
         
         if(current->type == Token_Type::semicolon)
@@ -901,8 +1007,10 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             {
                 print_dot_child(pb, decl_ast->decl_type, this_serial, serial);
             }
-            assert(decl_ast->expr);
-            print_dot_child(pb, decl_ast->expr, this_serial, serial);
+            if(decl_ast->expr)
+            {
+                print_dot_child(pb, decl_ast->expr, this_serial, serial);
+            }
         } break;
         case AST_Type::block_ast: {
             Block_AST *block_ast = static_cast<Block_AST*>(ast);
@@ -986,6 +1094,32 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             if(if_ast->else_block)
             {
                 print_dot_child(pb, if_ast->else_block, this_serial, serial);
+            }
+        } break;
+        case AST_Type::struct_ast: {
+            Struct_AST *struct_ast = static_cast<Struct_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"struct\"];\n", this_serial);
+            for(u64 i = 0; i < struct_ast->constants.count; ++i)
+            {
+                print_dot_child(pb, struct_ast->constants[i], this_serial, serial);
+            }
+            for(u64 i = 0; i < struct_ast->fields.count; ++i)
+            {
+                print_dot_child(pb, struct_ast->fields[i], this_serial, serial);
+            }
+        } break;
+        case AST_Type::enum_ast: {
+            Enum_AST *enum_ast = static_cast<Enum_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"enum\"];\n", this_serial);
+            for(u64 i = 0; i < enum_ast->values.count; ++i)
+            {
+                print_dot_child(pb, enum_ast->values[i], this_serial, serial);
             }
         } break;
         default: {
