@@ -109,7 +109,14 @@ internal Number_AST make_number_ast(Token number)
     return result;
 }
 
-internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_value = true, bool require_constant = false);
+enum class Decl_Type
+{
+    Statement,
+    Struct,
+    Enum,
+};
+
+internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Decl_Type type);
 internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr);
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
 internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr);
@@ -377,7 +384,7 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         
         while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
         {
-            Decl_AST *decl = parse_decl(ctx, &current, true, true);
+            Decl_AST *decl = parse_decl(ctx, &current, Decl_Type::Enum);
             if(!decl)
             {
                 return nullptr;
@@ -425,7 +432,7 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         
         while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
         {
-            Decl_AST *decl = parse_decl(ctx, &current, false);
+            Decl_AST *decl = parse_decl(ctx, &current, Decl_Type::Struct);
             if(!decl)
             {
                 return nullptr;
@@ -759,7 +766,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
             {
                 // Expect a declaration
                 current = at_ident;
-                Decl_AST *decl = parse_decl(ctx, &current);
+                Decl_AST *decl = parse_decl(ctx, &current, Decl_Type::Statement);
                 if(!decl)
                 {
                     return nullptr;
@@ -867,7 +874,7 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     return result;
 }
 
-Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_value, bool require_constant)
+Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Decl_Type decl_type)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -884,10 +891,13 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_val
         Token *ident_tok = current;
         ++current;
         AST *type = nullptr;
-        bool expect_expr = require_value;
-        bool is_constant = false;
         
-        if(current->type == Token_Type::colon && !require_constant)
+        bool not_enum = (decl_type != Decl_Type::Enum);
+        bool require_value = (decl_type == Decl_Type::Statement);
+        bool expect_expr;
+        bool is_constant;
+        
+        if(current->type == Token_Type::colon && not_enum)
         {
             ++current;
             type = parse_expr(ctx, &current);
@@ -900,36 +910,46 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_val
             {
                 ++current;
                 expect_expr = true;
+                is_constant = false;
+            }
+            else if(current->type == Token_Type::colon)
+            {
+                ++current;
+                expect_expr = true;
+                is_constant = true;
             }
             else if(require_value)
             {
-                report_error(ctx, start_section, current, "Expected '='");
+                report_error(ctx, start_section, current, "Expected '=' or ':'");
                 return nullptr;
             }
+            else
+            {
+                expect_expr = false;
+                is_constant = false;
+            }
         }
-        else if(current->type == Token_Type::colon_eq && !require_constant)
+        else if(current->type == Token_Type::colon_eq && not_enum)
         {
             ++current;
             expect_expr = true;
+            is_constant = false;
         }
         else if(current->type == Token_Type::double_colon)
         {
             ++current;
             expect_expr = true;
             is_constant = true;
-            // TODO: indicate this should be a constant
+        }
+        else if(not_enum)
+        {
+            report_error(ctx, start_section, current, "Expected ':', ':=', or '::'");
+            return nullptr;
         }
         else
         {
-            if(require_constant)
-            {
-                report_error(ctx, start_section, current, "Expected '::'");
-            }
-            else
-            {
-                report_error(ctx, start_section, current, "Expected ':', ':=', or '::'");
-            }
-            return nullptr;
+            expect_expr = false;
+            is_constant = true;
         }
         
         AST *expr = nullptr;
@@ -948,13 +968,22 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, bool require_val
             }
         }
         
+        // TODO: verify that the expression is constant if is_constant?
+        
         if(current->type == Token_Type::semicolon)
         {
             ++current;
         }
         else
         {
-            report_error(ctx, start_section, current, "Expected ';'");
+            if(decl_type == Decl_Type::Enum)
+            {
+                report_error(ctx, start_section, current, "Expected ';' or '::'");
+            }
+            else
+            {
+                report_error(ctx, start_section, current, "Expected ';'");
+            }
             return nullptr;
         }
         
@@ -991,7 +1020,7 @@ Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx)
     while(current->type != Token_Type::eof)
     {
         start_section = current;
-        Decl_AST *decl = parse_decl(ctx, &current);
+        Decl_AST *decl = parse_decl(ctx, &current, Decl_Type::Statement);
         if(decl)
         {
             array_add(&result, decl);

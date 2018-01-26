@@ -52,10 +52,11 @@ data_type :: struct {
 	field2 : s32 = 10;
 	const2 :: 22;
 	field3 : u8;
+	const3 : s32 : 22;
 };
 
 thing :: enum {
 	const1 :: 1;
-	const2 :: 2;
+	const2;
 	const3 :: 3;
 };

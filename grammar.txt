@@ -8,6 +8,7 @@ decl = ident '=' expr ':' expr ';'
      | const-decl
 
 const-decl = ident '::' expr ';'
+           | ident ':' expr ':' expr ';'
 
 expr = expr3 '+' expr
      | expr3 '-' expr
