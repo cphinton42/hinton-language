@@ -304,16 +304,6 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
                 
                 break;
             }
-            /*
-                if(current->type == Token_Type::double_plus)
-                {
-                    break;
-                }
-                if(current->type == Token_Type::double_minus)
-                {
-                    break;
-                }
-                */
             case 0:
             found_op = false;
             break;
@@ -754,7 +744,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
     }
     else
     {
-        // Expect an expression or declaration
+        // Expect an expression, declaration, or operation (e.g. +=)
         
         if(current->type == Token_Type::ident)
         {
@@ -772,6 +762,55 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
                     return nullptr;
                 }
                 result = decl;
+            }
+            else if(current->type == Token_Type::equal ||
+                    current->type == Token_Type::mul_eq ||
+                    current->type == Token_Type::add_eq ||
+                    current->type == Token_Type::sub_eq ||
+                    current->type == Token_Type::div_eq)
+            {
+                Assign_Operator assign_type;
+                switch(current->type)
+                {
+                    case Token_Type::equal: {
+                        assign_type = Assign_Operator::equal;
+                    } break;
+                    case Token_Type::mul_eq: {
+                        assign_type = Assign_Operator::mul_eq;
+                    } break;
+                    case Token_Type::add_eq: {
+                        assign_type = Assign_Operator::add_eq;
+                    } break;
+                    case Token_Type::sub_eq: {
+                        assign_type = Assign_Operator::sub_eq;
+                    } break;
+                    case Token_Type::div_eq: {
+                        assign_type = Assign_Operator::div_eq;
+                    } break;
+                    default: {
+                        assert(false);
+                    } break;
+                }
+                
+                ++current;
+                AST *expr = parse_expr(ctx, &current);
+                if(!expr)
+                {
+                    return nullptr;
+                }
+                require_semicolon = true;
+                
+                Assign_AST *assign = pool_alloc(Assign_AST, &ctx->ast_pool, 1);
+                assign->type = AST_Type::assign_ast;
+                assign->flags = 0;
+                assign->line_number = line_number;
+                assign->line_offset = line_offset;
+                
+                assign->ident = make_ident_ast(*at_ident);
+                assign->assign_type = assign_type;
+                assign->rhs = expr;
+                
+                result = assign;
             }
             else
             {
@@ -1188,6 +1227,15 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             {
                 print_dot_child(pb, enum_ast->values[i], this_serial, serial);
             }
+        } break;
+        case AST_Type::assign_ast: {
+            Assign_AST *assign_ast = static_cast<Assign_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, assign_names[(u64)assign_ast->assign_type]);
+            print_dot_child(pb, &assign_ast->ident, this_serial, serial);
+            print_dot_child(pb, assign_ast->rhs, this_serial, serial);
         } break;
         default: {
             print_err("Unknown AST type in dot printer\n");

@@ -2,9 +2,7 @@
 
 ### Immediate TODO's
 
- - Constant declarations with explicit type (e.g. decl : u32 : 10)
- - Auto-increment enum values?
- - Modifying statments (e.g. +=)
+ - Unary operators -,+ (++,-- ?)
  - Pointer types, (de)reference operator
  - Function type expressions
  - For loops
@@ -24,6 +22,7 @@
 
 ### Other TODO's
 
+ - are built-in types keywords, or just bound identifiers?
  - built-in array type, string type
  - vector types (SIMD)
 

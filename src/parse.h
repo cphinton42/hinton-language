@@ -27,6 +27,7 @@ enum class AST_Type : u32
     if_ast,
     enum_ast,
     struct_ast,
+    assign_ast,
 };
 
 constexpr u32 DECL_FLAG_CONSTANT = 1;
@@ -140,6 +141,30 @@ struct Struct_AST : AST
 struct Enum_AST : AST
 {
     Array<Decl_AST*> values;
+};
+
+enum class Assign_Operator : u64
+{
+    equal,
+    mul_eq,
+    add_eq,
+    sub_eq,
+    div_eq
+};
+
+const byte *assign_names[] = {
+    "=",
+    "*=",
+    "+=",
+    "-=",
+    "/=",
+};
+
+struct Assign_AST : AST
+{
+    Ident_AST ident;
+    Assign_Operator assign_type;
+    AST *rhs;
 };
 
 

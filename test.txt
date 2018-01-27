@@ -44,6 +44,8 @@ func3 : F2 = () -> u32 {
     {
         func(a); /* we can only call functions that take one argument */
     }
+
+	var += 31;
 };
 
 data_type :: struct {
