@@ -1,4 +1,4 @@
-extensions=".c.cpp.h.4coder";
+extensions=".c.cpp.h.4coder.txt.md";
 
 fkey_command_win[1] = {};
 fkey_command_win[2] = {};
