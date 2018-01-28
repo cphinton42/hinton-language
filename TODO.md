@@ -2,12 +2,11 @@
 
 ### Immediate TODO's
 
- - Unary operators -,+ (++,-- ?)
- - Pointer types, (de)reference operator
+ - return statements
  - Function type expressions
  - For loops
- - Scopes, linking identifiers
  - Strings, characters
+ - Scopes, linking identifiers
  - Type checking
  - Create general allocator interface
  - Cleanup memory leaks in parsing

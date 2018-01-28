@@ -40,9 +40,8 @@ func3 : F2 = () -> u32 {
     if 10 + 10 {
         expr + 42;
     }
-    else
-    {
-        func(a); /* we can only call functions that take one argument */
+    else {
+        func(a);
     }
 
 	var += 31;
@@ -51,7 +50,7 @@ func3 : F2 = () -> u32 {
 data_type :: struct {
     field1 : u32 = 0;
 	const1 :: 10;
-	field2 : s32 = 10;
+	field2 : s32 = -10;
 	const2 :: 22;
 	field3 : u8;
 	const3 : s32 : 22;
@@ -61,4 +60,16 @@ thing :: enum {
 	const1 :: 1;
 	const2;
 	const3 :: 3;
+};
+
+Link :: struct {
+	next : &Link;
+	data : &data_type;
+};
+
+get_last :: (head : &Link) -> u32 {
+	while(head.next) {
+		head = head.next;
+	}
+	*head.data;
 };

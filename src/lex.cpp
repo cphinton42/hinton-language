@@ -403,6 +403,10 @@ Dynamic_Array<Token> lex_string(String file_contents)
                 add_token(Token_Type::dot, make_array(1, point));
                 c = *(++point);
             } break;
+            case '&': {
+                add_token(Token_Type::ref, make_array(1, point));
+                c = *(++point);
+            } break;
             default: {
                 // TODO: report better error
                 report_error(file_contents, point-1, point, line_number, line_offset, "Unexpected character");

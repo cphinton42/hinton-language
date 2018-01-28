@@ -36,7 +36,7 @@ enum class Token_Type : u64
     sub,
     bor,
     lor,
-    band,
+    ref,
     land,
     div,
     equal,

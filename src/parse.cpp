@@ -148,14 +148,14 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
             {
                 op = Binary_Operator::add;
                 found_op = true;
-                rhs_precedence = 2;
+                rhs_precedence = precedence - 1;
                 break;
             }
             if(current->type == Token_Type::sub)
             {
                 op = Binary_Operator::sub;
                 found_op = true;
-                rhs_precedence = 2;
+                rhs_precedence = precedence - 1;
                 break;
             }
             case 2:
@@ -163,14 +163,14 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
             {
                 op = Binary_Operator::mul;
                 found_op = true;
-                rhs_precedence = 1;
+                rhs_precedence = precedence - 1;
                 break;
             }
             if(current->type == Token_Type::div)
             {
                 op = Binary_Operator::div;
                 found_op = true;
-                rhs_precedence = 1;
+                rhs_precedence = precedence - 1;
                 break;
             }
             case 1:
@@ -650,6 +650,51 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         *result_number = make_number_ast(*current);
         result = result_number;
         ++current;
+    }
+    else if(current->type == Token_Type::add ||
+            current->type == Token_Type::sub ||
+            current->type == Token_Type::mul ||
+            current->type == Token_Type::ref)
+    {
+        u32 line_number = current->line_number;
+        u32 line_offset = current->line_offset;
+        Unary_Operator op;
+        switch(current->type)
+        {
+            case Token_Type::add: {
+                op = Unary_Operator::plus;
+            } break;
+            case Token_Type::sub: {
+                op = Unary_Operator::minus;
+            } break;
+            case Token_Type::mul: {
+                op = Unary_Operator::deref;
+            } break;
+            case Token_Type::ref: {
+                op = Unary_Operator::ref;
+            } break;
+            default: {
+                assert(false);
+            } break;
+        }
+        
+        ++current;
+        AST *operand = parse_expr(ctx, &current);
+        if(!operand)
+        {
+            return nullptr;
+        }
+        
+        Unary_Operator_AST *unary_ast = pool_alloc(Unary_Operator_AST, &ctx->ast_pool, 1);
+        
+        unary_ast->type = AST_Type::unary_ast;
+        unary_ast->flags = 0;
+        unary_ast->line_number = line_number;
+        unary_ast->line_offset = line_offset;
+        unary_ast->op = op;
+        unary_ast->operand = operand;
+        
+        result = unary_ast;
     }
     
     if(!result)
@@ -1236,6 +1281,14 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, assign_names[(u64)assign_ast->assign_type]);
             print_dot_child(pb, &assign_ast->ident, this_serial, serial);
             print_dot_child(pb, assign_ast->rhs, this_serial, serial);
+        } break;
+        case AST_Type::unary_ast: {
+            Unary_Operator_AST *unary_ast = static_cast<Unary_Operator_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, unary_operator_names[(u64)unary_ast->op]);
+            print_dot_child(pb, unary_ast->operand, this_serial, serial);
         } break;
         default: {
             print_err("Unknown AST type in dot printer\n");
