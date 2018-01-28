@@ -783,6 +783,26 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
         
         result = while_ast;
     }
+    else if(current->type == Token_Type::key_return)
+    {
+        require_semicolon = true;
+        ++current;
+        AST *expr = parse_expr(ctx, &current);
+        if(!expr)
+        {
+            return nullptr;
+        }
+        
+        Return_AST *return_ast = pool_alloc(Return_AST, &ctx->ast_pool, 1);
+        return_ast->type = AST_Type::return_ast;
+        return_ast->flags = 0;
+        return_ast->line_number = line_number;
+        return_ast->line_offset = line_offset;
+        
+        return_ast->expr = expr;
+        
+        result = return_ast;
+    }
     else if(current->type == Token_Type::open_brace)
     {
         result = parse_statement_block(ctx, &current);
@@ -1289,6 +1309,14 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             
             print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, unary_operator_names[(u64)unary_ast->op]);
             print_dot_child(pb, unary_ast->operand, this_serial, serial);
+        } break;
+        case AST_Type::return_ast: {
+            Return_AST *return_ast = static_cast<Return_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"return\"];\n", this_serial);
+            print_dot_child(pb, return_ast->expr, this_serial, serial);
         } break;
         default: {
             print_err("Unknown AST type in dot printer\n");

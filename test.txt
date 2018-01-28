@@ -71,5 +71,5 @@ get_last :: (head : &Link) -> u32 {
 	while(head.next) {
 		head = head.next;
 	}
-	*head.data;
+	return (*head.data);
 };

@@ -29,6 +29,7 @@ enum class AST_Type : u32
     struct_ast,
     assign_ast,
     unary_ast,
+    return_ast,
 };
 
 constexpr u32 DECL_FLAG_CONSTANT = 1;
@@ -187,6 +188,11 @@ struct Unary_Operator_AST : AST
 {
     Unary_Operator op;
     AST *operand;
+};
+
+struct Return_AST : AST
+{
+    AST *expr;
 };
 
 

@@ -2,7 +2,6 @@
 
 ### Immediate TODO's
 
- - return statements
  - Function type expressions
  - For loops
  - Strings, characters

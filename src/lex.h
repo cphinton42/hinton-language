@@ -11,6 +11,7 @@ enum class Token_Type : u64
     key_if,
     key_else,
     key_struct,
+    key_return,
     key_while,
     
     keywords_begin = key_enum,
@@ -56,6 +57,7 @@ X("for") \
 X("if") \
 X("else") \
 X("struct") \
+X("return") \
 X("while") \
 X(",") \
 X(";") \
