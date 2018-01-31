@@ -676,6 +676,19 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         result = result_number;
         ++current;
     }
+    else if(current->type == Token_Type::key_void)
+    {
+        Primitive_AST *prim_ast = pool_alloc(Primitive_AST, &ctx->ast_pool, 1);
+        prim_ast->type = AST_Type::primitive_ast;
+        prim_ast->flags = 0;
+        prim_ast->line_number = current->line_number;
+        prim_ast->line_offset = current->line_offset;
+        
+        prim_ast->primitive = Primitive_Type::void_t;
+        
+        ++current;
+        result = prim_ast;
+    }
     else if(current->type == Token_Type::add ||
             current->type == Token_Type::sub ||
             current->type == Token_Type::mul ||

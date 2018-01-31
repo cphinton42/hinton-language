@@ -2,7 +2,6 @@
 
 ### Immediate TODO's
 
- - Function type expressions
  - For loops
  - Strings, characters
  - Scopes, linking identifiers

@@ -74,4 +74,4 @@ get_last :: (head : &Link) -> u32 {
 	return *head.data;
 };
 
-callback_type :: (ctx : &Context, param : s32, param : s32) -> ret_type;
+callback_type :: (ctx : &Context, param : s32, param : s32) -> void;
