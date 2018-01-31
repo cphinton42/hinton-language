@@ -18,7 +18,7 @@ id4 : u32 = 10 + 10 + 10 + 10 * 3 / 4;
 
 id5 : u32 = func(bar)[10 + 10].member + 10;
 
-func : F = (param1 : T1, param2 : T2) {};
+func : F = (param1 : T1, param2 : T2) -> ret_type {};
 
 func2 : F2 = () -> u32 {};
 
@@ -33,7 +33,7 @@ func3 : F2 = () -> u32 {
 	const :: 42;
 	other : u32 = 0;
 
-	inner_func :: (param1 : T1, parma2 : T2) {
+	inner_func :: (param1 : T1, parma2 := default_val) -> ret_type {
 		ok;
 	};
 
@@ -71,5 +71,5 @@ get_last :: (head : &Link) -> u32 {
 	while(head.next) {
 		head = head.next;
 	}
-	return (*head.data);
+	return *head.data;
 };

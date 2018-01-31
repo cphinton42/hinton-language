@@ -475,173 +475,198 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
     }
     else if(current->type == Token_Type::open_paren)
     {
+        // This could be a parenthesized expression, a function type, or a function literal
+        
         u32 line_number = current->line_number;
         u32 line_offset = current->line_offset;
         
         ++current;
-        bool expect_func = false;
-        Ident_AST **param_names = nullptr; 
-        AST **param_types = nullptr;
-        u64 n_parameters = 0;
         
-        if(current->type == Token_Type::close_paren)
-        {
-            // expect function literal with no parameters
-            ++current;
-            expect_func = true;
-        }
-        else
-        {
-            AST *first_expr = parse_expr(ctx, &current);
-            if(current->type == Token_Type::close_paren)
-            {
-                // Just a parethesized expression
-                ++current;
-                result = first_expr;
-            }
-            else
-            {
-                expect_func = true;
-                
-                if(first_expr->type != AST_Type::ident_ast)
-                {
-                    report_error(ctx, start_section, current, "Expected ')'");
-                    return nullptr;
-                }
-                if(current->type != Token_Type::colon)
-                {
-                    report_error(ctx, start_section, current, "Expected ':' in parameter list");
-                    return nullptr;
-                }
-                
-                ++current;
-                
-                Ident_AST *ident = static_cast<Ident_AST*>(first_expr);
-                AST *type = parse_expr(ctx, &current);
-                if(!type)
-                {
-                    return nullptr;
-                }
-                
-                // TODO create a temporary allocator for things like this ?
-                // In any case, this is currently a memory leak
-                Dynamic_Array<Parameter_AST> parameters = {0};
-                array_add(&parameters, {ident,type});
-                
-                while(true)
-                {
-                    if(current->type == Token_Type::comma)
-                    {
-                        ++current;
-                        Parameter_AST param;
-                        if(current->type == Token_Type::ident)
-                        {
-                            Ident_AST *ident = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
-                            *ident = make_ident_ast(*current);
-                            param.name = ident;
-                            ++current;
-                            if(current->type == Token_Type::colon)
-                            {
-                                ++current;
-                                param.type= parse_expr(ctx, &current);
-                                if(param.type)
-                                {
-                                    array_add(&parameters, param);
-                                }
-                                else
-                                {
-                                    return nullptr;
-                                }
-                            }
-                            else
-                            {
-                                report_error(ctx, start_section, current, "Expected ':'");
-                                return nullptr;
-                            }
-                        }
-                        else
-                        {
-                            report_error(ctx, start_section, current, "Expected identifier");
-                            return nullptr;
-                        }
-                    }
-                    else if(current->type == Token_Type::close_paren)
-                    {
-                        ++current;
-                        break;
-                    }
-                    else
-                    {
-                        report_error(ctx, start_section, current, "Expected ',' or ')'");
-                        return nullptr;
-                    }
-                }
-                
-                n_parameters = parameters.count;
-                param_names = pool_alloc(Ident_AST*, &ctx->ast_pool, n_parameters);
-                param_types = pool_alloc(AST*, &ctx->ast_pool, n_parameters);
-                
-                for(u64 i = 0; i < n_parameters; ++i)
-                {
-                    param_names[i] = parameters[i].name;
-                    param_types[i] = parameters[i].type;
-                }
-            }
-        }
+        Dynamic_Array<Parameter_AST> parameters = {0};
         
-        if(expect_func)
+        bool expect_more = (current->type != Token_Type::eof && current->type != Token_Type::close_paren);
+        bool must_be_func = false;
+        bool must_have_body = false;
+        
+        while(expect_more)
         {
-            AST *return_type = nullptr;
+            Ident_AST *ident = nullptr;
+            AST *type = nullptr;
+            AST *default_value = nullptr;
             
-            if(current->type == Token_Type::arrow)
-            {
-                ++current;
-                return_type = parse_expr(ctx, &current);
-                if(!return_type)
-                {
-                    return nullptr;
-                }
-            }
-            
-            Block_AST *block = parse_statement_block(ctx, &current);
-            if(block)
-            {
-                
-                Function_Type_AST *func_type = pool_alloc(Function_Type_AST, &ctx->ast_pool, 1);
-                
-                func_type->type = AST_Type::function_type_ast;
-                func_type->flags = 0;
-                func_type->line_number = line_number;
-                func_type->line_offset = line_offset;
-                
-                func_type->parameter_types.count = n_parameters;
-                func_type->parameter_types.data = param_types;
-                if(return_type)
-                {
-                    func_type->return_types.count = 1;
-                    func_type->return_types.data = pool_alloc(AST*, &ctx->ast_pool, 1);
-                    func_type->return_types[0] = return_type;
-                }
-                else
-                {
-                    func_type->return_types = {0};
-                }
-                
-                Function_AST *result_func = pool_alloc(Function_AST, &ctx->ast_pool, 1);
-                result_func->type = AST_Type::function_ast;
-                result_func->flags = 0;
-                result_func->line_number = line_number;
-                result_func->line_offset = line_offset;
-                result_func->prototype = func_type;
-                result_func->param_names.count = n_parameters;
-                result_func->param_names.data = param_names;
-                result_func->block = block;
-                result = result_func;
-            }
-            else
+            AST *expr = parse_expr(ctx, &current);
+            if(!expr)
             {
                 return nullptr;
             }
+            // expr could be parameter name, parameter type, or maybe an expr, depending on must_be_func
+            
+            if(expr->type == AST_Type::ident_ast)
+            {
+                // If there is a ':' or ':=' the identifier must be a parameter name
+                // Otherwise, it could be a Type, or just a parenthesized expression
+                
+                bool expect_default = false;
+                if(current->type == Token_Type::colon)
+                {
+                    ++current;
+                    must_be_func = true;
+                    
+                    ident = static_cast<Ident_AST*>(expr);
+                    type = parse_expr(ctx, &current);
+                    
+                    if(!type)
+                    {
+                        return nullptr;
+                    }
+                    if(current->type == Token_Type::equal)
+                    {
+                        ++current;
+                        expect_default = true;
+                    }
+                }
+                else if(current->type == Token_Type::colon_eq)
+                {
+                    ++current;
+                    must_be_func = true;
+                    
+                    ident = static_cast<Ident_AST*>(expr);
+                    // type needs to be inferred
+                    expect_default = true;
+                }
+                else
+                {
+                    type = expr;
+                }
+                
+                if(expect_default)
+                {
+                    must_have_body = true;
+                    default_value = parse_expr(ctx, &current);
+                    if(!default_value)
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+            else
+            {
+                // Expr is not a parameter name, it could be unnamed parameter, or just a parethesized expression
+                type = expr;
+            }
+            
+            array_add(&parameters, {ident,type,default_value});
+            
+            if(current->type == Token_Type::comma)
+            {
+                ++current;
+                must_be_func = true;
+                expect_more = true;
+            }
+            else
+            {
+                expect_more = false;
+            }
+        }
+        
+        if(current->type != Token_Type::close_paren)
+        {
+            report_error(ctx, start_section, current, "Expected ')'");
+            return nullptr;
+        }
+        
+        ++current;
+        
+        if(current->type == Token_Type::arrow)
+        {
+            ++current;
+        }
+        else if(must_be_func)
+        {
+            report_error(ctx, start_section, current, "Expected '->'");
+            return nullptr;
+        }
+        else
+        {
+            // It was just a parenthesized expression
+            // TODO: fix memory leak
+            assert(parameters.count == 1);
+            assert(parameters[0].name == nullptr);
+            assert(parameters[0].type != nullptr);
+            assert(parameters[0].default_value == nullptr);
+            
+            return parameters[0].type;
+        }
+        
+        // Now parse return type
+        AST *return_type = parse_expr(ctx, &current);
+        if(!return_type)
+        {
+            return nullptr;
+        }
+        
+        Block_AST *block = nullptr;
+        
+        if(current->type == Token_Type::open_brace)
+        {
+            block = parse_statement_block(ctx, &current);
+            if(!block)
+            {
+                return nullptr;
+            }
+        }
+        else if(must_have_body)
+        {
+            report_error(ctx, start_section, current, "Expected '{'. Only function literals can have default types, not function types");
+            return nullptr;
+        }
+        
+        Function_Type_AST *func_type = pool_alloc(Function_Type_AST, &ctx->ast_pool, 1);
+        func_type->type = AST_Type::function_type_ast;
+        func_type->flags = 0;
+        func_type->line_number = line_number;
+        func_type->line_offset = line_offset;
+        
+        func_type->parameter_types.count = parameters.count;
+        func_type->parameter_types.data = pool_alloc(AST*, &ctx->ast_pool, parameters.count);
+        
+        func_type->return_types.count = 1;
+        func_type->return_types.data = pool_alloc(AST*, &ctx->ast_pool, 1);
+        func_type->return_types[0] = return_type;
+        
+        
+        if(block)
+        {
+            Function_AST *result_func = pool_alloc(Function_AST, &ctx->ast_pool, 1);
+            result_func->type = AST_Type::function_ast;
+            result_func->flags = 0;
+            result_func->line_number = line_number;
+            result_func->line_offset = line_offset;
+            
+            result_func->prototype = func_type;
+            result_func->block = block;
+            
+            result_func->param_names.count = parameters.count;
+            result_func->param_names.data = pool_alloc(Ident_AST*, &ctx->ast_pool, parameters.count);
+            result_func->default_values.count = parameters.count;
+            result_func->default_values.data = pool_alloc(AST*, &ctx->ast_pool, parameters.count);
+            
+            for(u64 i = 0; i < parameters.count; ++i)
+            {
+                func_type->parameter_types[i] = parameters[i].type;
+                result_func->param_names[i] = parameters[i].name;
+                result_func->default_values[i] = parameters[i].default_value;
+            }
+            
+            result = result_func;
+        }
+        else
+        {
+            for(u64 i = 0; i < parameters.count; ++i)
+            {
+                func_type->parameter_types[i] = parameters[i].type;
+            }
+            result = func_type;
         }
     }
     else if(current->type == Token_Type::number)
@@ -1201,11 +1226,17 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             
             for(u64 i = 0; i < type_ast->parameter_types.count; ++i)
             {
-                print_dot_child(pb, type_ast->parameter_types[i], this_serial, serial);
+                if(type_ast->parameter_types[i])
+                {
+                    print_dot_child(pb, type_ast->parameter_types[i], this_serial, serial);
+                }
             }
             for(u64 i = 0; i < type_ast->return_types.count; ++i)
             {
-                print_dot_child(pb, type_ast->return_types[i], this_serial, serial);
+                if(type_ast->return_types[i])
+                {
+                    print_dot_child(pb, type_ast->return_types[i], this_serial, serial);
+                }
             }
         } break;
         case AST_Type::function_ast: {
@@ -1217,7 +1248,17 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             print_dot_child(pb, function_ast->prototype, this_serial, serial);
             for(u64 i = 0; i < function_ast->param_names.count; ++i)
             {
-                print_dot_child(pb, function_ast->param_names[i], this_serial, serial);
+                if(function_ast->param_names[i])
+                {
+                    print_dot_child(pb, function_ast->param_names[i], this_serial, serial);
+                }
+            }
+            for(u64 i = 0; i < function_ast->default_values.count; ++i)
+            {
+                if(function_ast->default_values[i])
+                {
+                    print_dot_child(pb, function_ast->default_values[i], this_serial, serial);
+                }
             }
             print_dot_child(pb, function_ast->block, this_serial, serial);
         } break;
@@ -1317,6 +1358,13 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             
             print_buf(pb, "n%ld[label=\"return\"];\n", this_serial);
             print_dot_child(pb, return_ast->expr, this_serial, serial);
+        } break;
+        case AST_Type::primitive_ast: {
+            Primitive_AST *primitive_ast = static_cast<Primitive_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, primitive_names[(u64)primitive_ast->primitive]);
         } break;
         default: {
             print_err("Unknown AST type in dot printer\n");

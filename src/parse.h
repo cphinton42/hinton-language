@@ -30,6 +30,7 @@ enum class AST_Type : u32
     assign_ast,
     unary_ast,
     return_ast,
+    primitive_ast,
 };
 
 constexpr u32 DECL_FLAG_CONSTANT = 1;
@@ -42,6 +43,30 @@ struct AST
     u32 line_offset;
 };
 
+enum class Primitive_Type : u64
+{
+    /* u8,
+    u16,
+    u32,
+    u64,
+    s8,
+    s16,
+    s32,
+    s64,
+    f32,
+    f64, */
+    void_t,
+};
+
+const byte *primitive_names[] = {
+    "void",
+};
+
+struct Primitive_AST : AST
+{
+    Primitive_Type primitive;
+};
+
 struct Ident_AST : AST
 {
     String ident;
@@ -52,6 +77,7 @@ struct Parameter_AST
 {
     Ident_AST *name;
     AST *type;
+    AST *default_value;
 };
 
 struct Decl_AST : AST
@@ -76,6 +102,7 @@ struct Function_AST : AST
 {
     Function_Type_AST *prototype;
     Array<Ident_AST*> param_names;
+    Array<AST*> default_values;
     Block_AST *block;
 };
 
