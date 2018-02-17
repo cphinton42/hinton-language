@@ -132,7 +132,7 @@ enum class Decl_Type
 internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Decl_Type type);
 internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr);
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
-internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr);
+internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence);
 
 internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence = 5)
 {
@@ -142,7 +142,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
         *current_ptr = current;
     };
     
-    AST *lhs = parse_base_expr(ctx, &current);
+    AST *lhs = parse_base_expr(ctx, &current, precedence);
     if(!lhs)
     {
         return nullptr;
@@ -370,7 +370,7 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
     }
 }
 
-internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
+internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -728,7 +728,8 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
     else if(current->type == Token_Type::add ||
             current->type == Token_Type::sub ||
             current->type == Token_Type::mul ||
-            current->type == Token_Type::ref)
+            current->type == Token_Type::ref ||
+            current->type == Token_Type::lnot)
     {
         u32 line_number = current->line_number;
         u32 line_offset = current->line_offset;
@@ -747,13 +748,16 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
             case Token_Type::ref: {
                 op = Unary_Operator::ref;
             } break;
+            case Token_Type::lnot: {
+                op = Unary_Operator::lnot;
+            } break;
             default: {
                 assert(false);
             } break;
         }
         
         ++current;
-        AST *operand = parse_expr(ctx, &current);
+        AST *operand = parse_expr(ctx, &current, precedence);
         if(!operand)
         {
             return nullptr;

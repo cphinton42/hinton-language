@@ -46,7 +46,7 @@ func3 : F2 = () -> u32 {
         func(a);
     }
 
-	if num-1 && a || b && c {
+	if num-1 && !a || b && c {
 		func2();
 	}
 

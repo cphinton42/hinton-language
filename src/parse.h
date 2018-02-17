@@ -262,6 +262,7 @@ enum class Unary_Operator : u64
     minus,
     deref,
     ref,
+    lnot,
 };
 
 const byte *unary_operator_names[] = {
@@ -269,6 +270,7 @@ const byte *unary_operator_names[] = {
     "-",
     "*",
     "&",
+    "!",
 };
 
 struct Unary_Operator_AST : AST
