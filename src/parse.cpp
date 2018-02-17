@@ -843,8 +843,19 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
         {
             return nullptr;
         }
-        if(!index_var && current->type == Token_Type::double_dot)
+        if(current->type == Token_Type::double_dot)
         {
+            if(index_var)
+            {
+                report_error(ctx, start_section, current, "There is only one variable to be named when iterating over a numerical range");
+                return nullptr;
+            }
+            if(by_pointer)
+            {
+                report_error(ctx, start_section, current, "Cannot iterate over numerical range by pointer");
+                return nullptr;
+            }
+            
             ++current;
             high_range_expr = parse_expr(ctx, &current);
             if(!high_range_expr)
@@ -1444,6 +1455,7 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             }
             else
             {
+                assert(!(for_ast->flags & FOR_FLAG_BY_POINTER));
                 print_buf(pb, "n%ld[label=\"for (range)\"];\n", this_serial);
             }
             
