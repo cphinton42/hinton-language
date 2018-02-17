@@ -44,6 +44,14 @@ func3 : F2 = () -> u32 {
         func(a);
     }
 
+	for arr {}
+	for 0..9 {}
+	for it : arr {}
+	for it,it_index : arr {}
+	for it : 0..9 {}
+
+	// for it,it_index : 0..9 {} // This is an error
+
 	var += 31;
 };
 

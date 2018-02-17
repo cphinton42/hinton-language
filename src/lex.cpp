@@ -249,7 +249,7 @@ Dynamic_Array<Token> lex_string(String file_contents)
                 }
                 while('0' <= c && c <= '9');
                 
-                if(c == '.')
+                if(c == '.' && point[1] != '.')
                 {
                     do
                     {
@@ -367,6 +367,20 @@ Dynamic_Array<Token> lex_string(String file_contents)
                     add_token(Token_Type::equal, make_array(1, start));
                 }
             } break;
+            case '.': {
+                start = point;
+                c = *(++point);
+                
+                if(c == '.')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::double_dot, make_array(2, start));
+                }
+                else
+                {
+                    add_token(Token_Type::dot, make_array(1, start));
+                }
+            } break;
             case ',': {
                 add_token(Token_Type::comma, make_array(1, point));
                 c = *(++point);
@@ -397,10 +411,6 @@ Dynamic_Array<Token> lex_string(String file_contents)
             } break;
             case '}': {
                 add_token(Token_Type::close_brace, make_array(1, point));
-                c = *(++point);
-            } break;
-            case '.': {
-                add_token(Token_Type::dot, make_array(1, point));
                 c = *(++point);
             } break;
             case '&': {

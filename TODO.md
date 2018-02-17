@@ -2,8 +2,8 @@
 
 ### Immediate TODO's
 
- - For loops
  - Strings, characters
+ - Operators !,~,&,|,&&,||
  - Scopes, linking identifiers
  - Type checking
  - Create general allocator interface

@@ -35,6 +35,9 @@ enum class AST_Type : u32
 
 constexpr u32 DECL_FLAG_CONSTANT = 1;
 
+constexpr u32 FOR_FLAG_BY_POINTER = 1;
+constexpr u32 FOR_FLAG_OVER_ARRAY = 2;
+
 struct AST
 {
     AST_Type type;
@@ -64,11 +67,15 @@ const byte *primitive_names[] = {
 
 struct Primitive_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::primitive_ast;
+    
     Primitive_Type primitive;
 };
 
 struct Ident_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::ident_ast;
+    
     String ident;
 };
 
@@ -82,6 +89,8 @@ struct Parameter_AST
 
 struct Decl_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::decl_ast;
+    
     Ident_AST ident;
     AST *decl_type;
     AST *expr;
@@ -89,17 +98,23 @@ struct Decl_AST : AST
 
 struct Block_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::block_ast;
+    
     Array<AST*> statements;
 };
 
 struct Function_Type_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::function_type_ast;
+    
     Array<AST*> parameter_types;
     Array<AST*> return_types;
 };
 
 struct Function_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::function_ast;
+    
     Function_Type_AST *prototype;
     Array<Ident_AST*> param_names;
     Array<AST*> default_values;
@@ -108,6 +123,8 @@ struct Function_AST : AST
 
 struct Number_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::number_ast;
+    
     String literal;
 };
 
@@ -132,6 +149,8 @@ const byte *binary_operator_names[] = {
 
 struct Binary_Operator_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::binary_operator_ast;
+    
     Binary_Operator op;
     AST *lhs;
     AST *rhs;
@@ -139,23 +158,46 @@ struct Binary_Operator_AST : AST
 
 struct Function_Call_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::function_call_ast;
+    
     AST *function;
     Array<AST*> args;
 };
 
 struct While_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::while_ast;
+    
     AST *guard;
     Block_AST *body;
 };
 
+
 struct For_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::for_ast;
+    
+    Ident_AST *induction_var;
+    union
+    {
+        struct
+        {
+            Ident_AST *index_var;
+            AST *array_expr;
+        };
+        struct
+        {
+            AST *low_expr;
+            AST *high_expr;
+        };
+    };
     Block_AST *body;
 };
 
 struct If_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::if_ast;
+    
     AST *guard;
     Block_AST *then_block;
     Block_AST *else_block;
@@ -163,12 +205,16 @@ struct If_AST : AST
 
 struct Struct_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::struct_ast;
+    
     Array<Decl_AST*> constants;
     Array<Decl_AST*> fields;
 };
 
 struct Enum_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::enum_ast;
+    
     Array<Decl_AST*> values;
 };
 
@@ -191,6 +237,8 @@ const byte *assign_names[] = {
 
 struct Assign_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::assign_ast;
+    
     Ident_AST ident;
     Assign_Operator assign_type;
     AST *rhs;
@@ -213,15 +261,18 @@ const byte *unary_operator_names[] = {
 
 struct Unary_Operator_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::unary_ast;
+    
     Unary_Operator op;
     AST *operand;
 };
 
 struct Return_AST : AST
 {
+    static constexpr AST_Type type_value = AST_Type::return_ast;
+    
     AST *expr;
 };
-
 
 void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size);
 

@@ -109,6 +109,19 @@ internal Number_AST make_number_ast(Token number)
     return result;
 }
 
+internal AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 line_offset)
+{
+    new_ast->type = type;
+    new_ast->flags = 0;
+    new_ast->line_number = line_number;
+    new_ast->line_offset = line_offset;
+    return new_ast;
+}
+
+#define construct_ast(pool, type, line_number, line_offset) \
+(static_cast<type*>(construct_ast_(pool_alloc(type,(pool),1),type::type_value, (line_number), (line_offset))))
+
+
 enum class Decl_Type
 {
     Statement,
@@ -759,8 +772,114 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
     if(current->type == Token_Type::key_for)
     {
         ++current;
-        // TODO
-        report_error(ctx, start_section, current, "for statements not yet implemented");
+        Token *start = current;
+        
+        Ident_AST *induction_var = nullptr;
+        Ident_AST *index_var = nullptr;
+        bool by_pointer = false;
+        
+        if(current->type == Token_Type::ref)
+        {
+            // expr or named identifier by pointer
+            by_pointer = true;
+            ++current;
+        }
+        if(current->type == Token_Type::ident)
+        {
+            bool must_use_names = false;
+            Token *first_ident = current;
+            Token *second_ident = nullptr;
+            ++current;
+            
+            if(current->type == Token_Type::comma)
+            {
+                must_use_names = true;
+                ++current;
+                if(current->type == Token_Type::ident)
+                {
+                    second_ident = current;
+                    ++current;
+                }
+                else
+                {
+                    report_error(ctx, start_section, current, "Expected identifier to name index variable");
+                    return nullptr;
+                }
+            }
+            
+            if(current->type == Token_Type::colon)
+            {
+                ++current;
+                
+                assert(first_ident);
+                
+                // TODO: move allocation to prevent memory leak
+                induction_var = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
+                *induction_var = make_ident_ast(*first_ident);
+                
+                if(second_ident)
+                {
+                    index_var = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
+                    *index_var = make_ident_ast(*second_ident);
+                }
+            }
+            else if(must_use_names)
+            {
+                report_error(ctx, start_section, current, "Expected ':' to separate variable names from range expression");
+                return nullptr;
+            }
+            else
+            {
+                // Not names, just a range expr.
+                current = start;
+            }
+        }
+        
+        AST *low_range_expr = nullptr;
+        AST *high_range_expr = nullptr;
+        
+        low_range_expr = parse_expr(ctx, &current);
+        if(!low_range_expr)
+        {
+            return nullptr;
+        }
+        if(!index_var && current->type == Token_Type::double_dot)
+        {
+            ++current;
+            high_range_expr = parse_expr(ctx, &current);
+            if(!high_range_expr)
+            {
+                return nullptr;
+            }
+        }
+        
+        Block_AST *body = parse_statement_block(ctx, &current);
+        if(!body)
+        {
+            return nullptr;
+        }
+        
+        For_AST *for_ast = construct_ast(&ctx->ast_pool, For_AST, line_number, line_offset);
+        if(by_pointer)
+        {
+            for_ast->flags |= FOR_FLAG_BY_POINTER;
+        }
+        
+        for_ast->induction_var = induction_var;
+        for_ast->body = body;
+        if(high_range_expr)
+        {
+            for_ast->low_expr = low_range_expr;
+            for_ast->high_expr = high_range_expr;
+        }
+        else
+        {
+            for_ast->flags |= FOR_FLAG_OVER_ARRAY;
+            for_ast->index_var = index_var;
+            for_ast->array_expr = low_range_expr;
+        }
+        
+        result = for_ast;
     }
     else if(current->type == Token_Type::key_if)
     {
@@ -1307,7 +1426,47 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             print_dot_child(pb, while_ast->guard, this_serial, serial);
             print_dot_child(pb, while_ast->body, this_serial, serial);
         } break;
-        // TODO: print for_ast
+        case AST_Type::for_ast: {
+            For_AST *for_ast = static_cast<For_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            if(for_ast->flags & FOR_FLAG_OVER_ARRAY)
+            {
+                if(for_ast->flags & FOR_FLAG_BY_POINTER)
+                {
+                    print_buf(pb, "n%ld[label=\"for &(array)\"];\n", this_serial);
+                }
+                else
+                {
+                    print_buf(pb, "n%ld[label=\"for (array)\"];\n", this_serial);
+                }
+            }
+            else
+            {
+                print_buf(pb, "n%ld[label=\"for (range)\"];\n", this_serial);
+            }
+            
+            if(for_ast->induction_var)
+            {
+                print_dot_child(pb, for_ast->induction_var, this_serial, serial);
+            }
+            if(for_ast->flags & FOR_FLAG_OVER_ARRAY)
+            {
+                if(for_ast->index_var)
+                {
+                    print_dot_child(pb, for_ast->index_var, this_serial, serial);
+                }
+                print_dot_child(pb, for_ast->array_expr, this_serial, serial);
+            }
+            else
+            {
+                print_dot_child(pb, for_ast->low_expr, this_serial, serial);
+                print_dot_child(pb, for_ast->high_expr, this_serial, serial);
+            }
+            
+            print_dot_child(pb, for_ast->body, this_serial, serial);
+        } break;
         case AST_Type::if_ast: {
             If_AST *if_ast = static_cast<If_AST*>(ast);
             

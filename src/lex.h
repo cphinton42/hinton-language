@@ -24,6 +24,7 @@ enum class Token_Type : u64
     colon_eq,
     double_colon,
     dot,
+    double_dot,
     arrow,
     
     open_paren,
@@ -67,6 +68,7 @@ X(":") \
 X(":=") \
 X("::") \
 X(".") \
+X("..") \
 X("->") \
 X("(") \
 X(")") \
