@@ -18,6 +18,8 @@ enum class Token_Type : u64
     keywords_begin = key_enum,
     keywords_last = key_while,
     
+    string,
+    
     comma,
     semicolon,
     colon,
@@ -62,6 +64,7 @@ X("struct") \
 X("return") \
 X("void") \
 X("while") \
+X("string") \
 X(",") \
 X(";") \
 X(":") \

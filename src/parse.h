@@ -31,6 +31,7 @@ enum class AST_Type : u32
     unary_ast,
     return_ast,
     primitive_ast,
+    string_ast,
 };
 
 constexpr u32 DECL_FLAG_CONSTANT = 1;
@@ -124,6 +125,13 @@ struct Function_AST : AST
 struct Number_AST : AST
 {
     static constexpr AST_Type type_value = AST_Type::number_ast;
+    
+    String literal;
+};
+
+struct String_AST : AST
+{
+    static constexpr AST_Type type_value = AST_Type::string_ast;
     
     String literal;
 };

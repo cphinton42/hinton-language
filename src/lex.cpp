@@ -286,6 +286,31 @@ Dynamic_Array<Token> lex_string(String file_contents)
                 u64 len = point - start;
                 add_token(Token_Type::number, make_array(len, start));
             } break;
+            case '"': {
+                c = *(++point);
+                start = point;
+                
+                while(c && c != '"')
+                {
+                    if(c == '\\')
+                    {
+                        c = *(++point);
+                        if(!c)
+                        {
+                            break;
+                        }
+                    }
+                    c = *(++point);
+                }
+                if(!c)
+                {
+                    report_error(file_contents, start, point, line_number, line_offset, "Unexpected EOF");
+                    continue;
+                }
+                u64 len = point - start;
+                add_token(Token_Type::string, make_array(len, start));
+                c = *(++point);
+            } break;
             case ':': {
                 start = point;
                 c = *(++point);

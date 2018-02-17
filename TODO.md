@@ -2,11 +2,10 @@
 
 ### Immediate TODO's
 
- - Strings, characters
  - Operators !,~,&,|,&&,||
  - Scopes, linking identifiers
  - Type checking
- - Create general allocator interface
+ - Create general allocator interface (? maybe just make it more uniform ?)
  - Cleanup memory leaks in parsing
  - Put newline on errors at the end of file that doesn't end in a newline
  - Code gen
@@ -27,4 +26,5 @@
 
  - Calling convention abstraction
  - Stack inspection
- - Stack-based context instead of thread-locals
+ - Stack-like context instead of thread-locals
+   (using a dedicated register/additional function parameter)

@@ -689,6 +689,13 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr)
         result = result_number;
         ++current;
     }
+    else if(current->type == Token_Type::string)
+    {
+        String_AST *result_string = construct_ast(&ctx->ast_pool, String_AST, current->line_number, current->line_offset);
+        result_string->literal = current->contents;
+        result = result_string;
+        ++current;
+    }
     else if(current->type == Token_Type::key_void)
     {
         Primitive_AST *prim_ast = pool_alloc(Primitive_AST, &ctx->ast_pool, 1);
@@ -1549,6 +1556,13 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
             u64 this_serial = (*serial)++;
             
             print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, primitive_names[(u64)primitive_ast->primitive]);
+        } break;
+        case AST_Type::string_ast: {
+            String_AST *string_ast = static_cast<String_AST*>(ast);
+            
+            u64 this_serial = (*serial)++;
+            
+            print_buf(pb, "n%ld[label=\"\\\"%.*s\\\"\"];\n", this_serial, string_ast->literal.count, string_ast->literal.data);
         } break;
         default: {
             print_err("Unknown AST type in dot printer\n");

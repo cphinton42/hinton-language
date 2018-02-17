@@ -33,6 +33,8 @@ func3 : F2 = () -> u32 {
 	const :: 42;
 	other : u32 = 0;
 
+	blah := "Hello World!";
+
 	inner_func :: (param1 : T1, parma2 := default_val) -> ret_type {
 		ok;
 	};
