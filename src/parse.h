@@ -144,6 +144,8 @@ enum class Binary_Operator : u64
     mul,
     div,
     subscript,
+    lor,
+    land,
 };
 
 const byte *binary_operator_names[] = {
@@ -153,6 +155,8 @@ const byte *binary_operator_names[] = {
     "*",
     "/",
     "[]",
+    "||",
+    "&&",
 };
 
 struct Binary_Operator_AST : AST

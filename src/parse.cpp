@@ -134,7 +134,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr);
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
 internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr);
 
-internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence = 3)
+internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence = 5)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -156,19 +156,35 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
         
         switch(precedence)
         {
+            case 5:
+            if(current->type == Token_Type::lor)
+            {
+                op = Binary_Operator::lor;
+                found_op = true;
+                rhs_precedence = 4;
+                break;
+            }
+            case 4:
+            if(current->type == Token_Type::land)
+            {
+                op = Binary_Operator::land;
+                found_op = true;
+                rhs_precedence = 3;
+                break;
+            }
             case 3:
             if(current->type == Token_Type::add)
             {
                 op = Binary_Operator::add;
                 found_op = true;
-                rhs_precedence = precedence - 1;
+                rhs_precedence = 2;
                 break;
             }
             if(current->type == Token_Type::sub)
             {
                 op = Binary_Operator::sub;
                 found_op = true;
-                rhs_precedence = precedence - 1;
+                rhs_precedence = 2;
                 break;
             }
             case 2:
@@ -176,14 +192,14 @@ internal AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 preceden
             {
                 op = Binary_Operator::mul;
                 found_op = true;
-                rhs_precedence = precedence - 1;
+                rhs_precedence = 1;
                 break;
             }
             if(current->type == Token_Type::div)
             {
                 op = Binary_Operator::div;
                 found_op = true;
-                rhs_precedence = precedence - 1;
+                rhs_precedence = 1;
                 break;
             }
             case 1:

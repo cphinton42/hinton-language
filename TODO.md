@@ -2,7 +2,7 @@
 
 ### Immediate TODO's
 
- - Operators !,~,&,|,&&,||
+ - Operator !
  - Scopes, linking identifiers
  - Type checking
  - Create general allocator interface (? maybe just make it more uniform ?)

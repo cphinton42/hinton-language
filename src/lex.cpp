@@ -406,6 +406,35 @@ Dynamic_Array<Token> lex_string(String file_contents)
                     add_token(Token_Type::dot, make_array(1, start));
                 }
             } break;
+            case '&': {
+                start = point;
+                c = *(++point);
+                
+                if(c == '&')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::land, make_array(2, start));
+                }
+                else
+                {
+                    add_token(Token_Type::ref, make_array(1, start));
+                }
+            } break;
+            case '|': {
+                start = point;
+                c = *(++point);
+                
+                if(c == '|')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::lor, make_array(2, start));
+                }
+                else
+                {
+                    report_error(file_contents, point-1, point, line_number, line_offset, "Unexpected character");
+                    continue;
+                }
+            } break;
             case ',': {
                 add_token(Token_Type::comma, make_array(1, point));
                 c = *(++point);
@@ -436,10 +465,6 @@ Dynamic_Array<Token> lex_string(String file_contents)
             } break;
             case '}': {
                 add_token(Token_Type::close_brace, make_array(1, point));
-                c = *(++point);
-            } break;
-            case '&': {
-                add_token(Token_Type::ref, make_array(1, point));
                 c = *(++point);
             } break;
             default: {

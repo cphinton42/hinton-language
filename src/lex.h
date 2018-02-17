@@ -39,11 +39,11 @@ enum class Token_Type : u64
     mul,
     add,
     sub,
-    bor,
     lor,
     ref,
     land,
     div,
+    lnot,
     equal,
     double_equal,
     mul_eq,
@@ -82,11 +82,11 @@ X("}") \
 X("*") \
 X("+") \
 X("-") \
-X("|") \
 X("||") \
 X("&") \
 X("&&") \
 X("/") \
+X("!") \
 X("=") \
 X("==") \
 X("*=") \

@@ -46,6 +46,10 @@ func3 : F2 = () -> u32 {
         func(a);
     }
 
+	if num-1 && a || b && c {
+		func2();
+	}
+
 	for arr {}
 	for 0..9 {}
 	for it : arr {}
