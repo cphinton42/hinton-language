@@ -2,17 +2,20 @@
 
 ### Immediate TODO's
 
- - Operator !
  - Scopes, linking identifiers
  - Type checking
+ - Code gen
+
+### Misc TODO's
+
  - Create general allocator interface (? maybe just make it more uniform ?)
  - Cleanup memory leaks in parsing
  - Put newline on errors at the end of file that doesn't end in a newline
- - Code gen
 
 ### Needed to be a serious language
 
  - Polymorphism
+   - Scopes may need to change a bit
  - FFI
  - intrinsics
 

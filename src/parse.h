@@ -47,6 +47,12 @@ struct AST
     u32 line_offset;
 };
 
+struct Parent_Scope
+{
+    AST *ast;
+    u64 index;
+};
+
 enum class Primitive_Type : u64
 {
     /* u8,
@@ -78,6 +84,9 @@ struct Ident_AST : AST
     static constexpr AST_Type type_value = AST_Type::ident_ast;
     
     String ident;
+    // Note: referred_to is probably mutually exclusive with parent
+    AST *referred_to;
+    Parent_Scope parent;
 };
 
 // Note: not actually part of the AST structure, just used during parsing
@@ -95,6 +104,7 @@ struct Decl_AST : AST
     Ident_AST ident;
     AST *decl_type;
     AST *expr;
+    Parent_Scope parent;
 };
 
 struct Block_AST : AST
@@ -102,6 +112,7 @@ struct Block_AST : AST
     static constexpr AST_Type type_value = AST_Type::block_ast;
     
     Array<AST*> statements;
+    Parent_Scope parent;
 };
 
 struct Function_Type_AST : AST
@@ -120,6 +131,7 @@ struct Function_AST : AST
     Array<Ident_AST*> param_names;
     Array<AST*> default_values;
     Block_AST *block;
+    Parent_Scope parent;
 };
 
 struct Number_AST : AST
@@ -204,6 +216,7 @@ struct For_AST : AST
         };
     };
     Block_AST *body;
+    Parent_Scope parent;
 };
 
 struct If_AST : AST

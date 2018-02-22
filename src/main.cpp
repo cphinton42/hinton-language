@@ -1,7 +1,9 @@
 
+
 int main(int argc, char **argv)
 {
     // Note: if this becomes multi-threaded, we can get rid of the globals (writes smaller than 4K are supposed to be atomic IIRC)
+    // Alternatively, formatting could occur in thread-local buffers, and output is guarded by a global mutex
     init_std_print_buffers();
     
     String file_contents = read_entire_file("test.txt");
