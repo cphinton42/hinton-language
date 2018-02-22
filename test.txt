@@ -8,24 +8,46 @@
 //	*/
 */
 
+// Avoid undeclared identifier for now
+u32 :: void;
+s32 :: void;
+
+derp :: 15;
 
 ident : u32 = ((derp) + 10);
-ident2 : s32 = w+10*5;
+ident2 : s32 = ident+10*5;
 
-id3 : u32 = w*10+5;
+// Avoid undeclared identifier for now
+F :: void;
+T1 :: void;
+T2 :: void;
+ret_type :: void;
+
+bar :: 42;
+
+func : F = (param1 : T1, param2 : T2) -> ret_type {};
+
+id3 : u32 = ident*10+5;
 
 id4 : u32 = 10 + 10 + 10 + 10 * 3 / 4;
 
 id5 : u32 = func(bar)[10 + 10].member + 10;
 
-func : F = (param1 : T1, param2 : T2) -> ret_type {};
 
-func2 : F2 = () -> u32 {};
 
-func3 : F2 = () -> u32 {
+func2 :: () -> u32 {};
+
+true :: 1;
+u8 :: void;
+default_val :: 5;
+ok := 33;
+
+func3 :: () -> u32 {
     while true {
-       func2(hello);
+       func2(ident);
     }
+
+	test_precedence :: void;
 
 	test_precedence(10, 10)(ident)();
 
@@ -35,20 +57,22 @@ func3 : F2 = () -> u32 {
 
 	blah := "Hello World!";
 
+    if 10 + 10 {
+        var + 42;
+    }
+    else {
+        func(const);
+    }
+
 	inner_func :: (param1 : T1, parma2 := default_val) -> ret_type {
 		ok;
 	};
 
-    if 10 + 10 {
-        expr + 42;
-    }
-    else {
-        func(a);
-    }
-
-	if num-1 && !a || b && c {
-		func2();
+	if other-1 && !id3 || id4 && id5 {
+		inner_func();
 	}
+
+	arr :: void;
 
 	for arr {}
 	for 0..9 {}
@@ -64,6 +88,7 @@ func3 : F2 = () -> u32 {
 
 	var += 31;
 };
+
 
 data_type :: struct {
     field1 : u32 = 0;
@@ -91,5 +116,7 @@ get_last :: (head : &Link) -> u32 {
 	}
 	return *head.data;
 };
+
+Context :: struct {};
 
 callback_type :: (ctx : &Context, param : s32, param : s32) -> void;

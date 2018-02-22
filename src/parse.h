@@ -34,10 +34,12 @@ enum class AST_Type : u16
     string_ast,
 };
 
-constexpr u16 DECL_FLAG_CONSTANT = 1;
+constexpr u16 AST_FLAG_SYNTHETIC = 1;
 
-constexpr u16 FOR_FLAG_BY_POINTER = 1;
-constexpr u16 FOR_FLAG_OVER_ARRAY = 2;
+constexpr u16 DECL_FLAG_CONSTANT = 2;
+
+constexpr u16 FOR_FLAG_BY_POINTER = 2;
+constexpr u16 FOR_FLAG_OVER_ARRAY = 4;
 
 struct AST
 {

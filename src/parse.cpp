@@ -705,6 +705,7 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
             {
                 expect_more = false;
             }
+            ++blank_parent.index;
         }
         
         if(current->type != Token_Type::close_paren)
@@ -796,6 +797,10 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                 func_type->parameter_types[i] = parameters[i].type;
                 result_func->param_names[i] = parameters[i].name;
                 result_func->default_values[i] = parameters[i].default_value;
+                if(result_func->default_values[i])
+                {
+                    set_parent_ast(result_func->default_values[i], result_func);
+                }
             }
             
             if(parent.ast)
@@ -1015,6 +1020,15 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
             for_ast->flags |= FOR_FLAG_BY_POINTER;
         }
         
+        if(!induction_var)
+        {
+            induction_var = construct_ast(&ctx->ast_pool, Ident_AST, 0, 0);
+            induction_var->ident = str_lit("it");
+            induction_var->referred_to = nullptr;
+            induction_var->parent = {0};
+            induction_var->flags |= AST_FLAG_SYNTHETIC;
+        }
+        
         for_ast->induction_var = induction_var;
         for_ast->body = body;
         if(high_range_expr)
@@ -1024,6 +1038,15 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         }
         else
         {
+            if(!index_var)
+            {
+                index_var = construct_ast(&ctx->ast_pool, Ident_AST, 0, 0);
+                index_var->ident = str_lit("it_index");
+                index_var->referred_to = nullptr;
+                index_var->parent = {0};
+                index_var->flags |= AST_FLAG_SYNTHETIC;
+            }
+            
             for_ast->flags |= FOR_FLAG_OVER_ARRAY;
             for_ast->index_var = index_var;
             for_ast->array_expr = low_range_expr;
@@ -1422,15 +1445,16 @@ Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx)
     Token *current = ctx->tokens.data;
     Token *start_section = current;
     
-    Parent_Scope blank_scope = {0};
+    Parent_Scope global_scope = {0};
     
     while(current->type != Token_Type::eof)
     {
         start_section = current;
-        Decl_AST *decl = parse_decl(ctx, &current, blank_scope, Decl_Type::Statement);
+        Decl_AST *decl = parse_decl(ctx, &current, global_scope, Decl_Type::Statement);
         if(decl)
         {
             array_add(&result, decl);
+            ++global_scope.index;
         }
         else
         {

@@ -3,6 +3,7 @@
 ### Immediate TODO's
 
  - Scopes, linking identifiers
+ - Add true, false keywords
  - Declarations introduce a new scope for recursion's sake.
    Doesn't make much sense when declaring a struct's field or enum value though
    Typechecking might take care of that?
