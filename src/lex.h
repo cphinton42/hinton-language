@@ -6,16 +6,18 @@ enum class Token_Type : u64
     ident,
     number,
     
+    key_else,
     key_enum,
+    key_false,
     key_for,
     key_if,
-    key_else,
     key_struct,
+    key_true,
     key_return,
     key_void,
     key_while,
     
-    keywords_begin = key_enum,
+    keywords_begin = key_else,
     keywords_last = key_while,
     
     string,
@@ -56,11 +58,13 @@ enum class Token_Type : u64
 #define FOR_TOKEN_NAME(X) \
 X("identifier") \
 X("number") \
+X("else") \
 X("enum") \
+X("false") \
 X("for") \
 X("if") \
-X("else") \
 X("struct") \
+X("true") \
 X("return") \
 X("void") \
 X("while") \

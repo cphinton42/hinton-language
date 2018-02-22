@@ -154,8 +154,6 @@ void link_ast(Array<Decl_AST*> globals, AST *current)
                 link_ast(globals, binary_operator_ast->rhs);
             }
         } break;
-        case AST_Type::number_ast: {
-        } break;
         case AST_Type::while_ast: {
             While_AST *while_ast = static_cast<While_AST*>(current);
             link_ast(globals, while_ast->guard);
@@ -214,9 +212,10 @@ void link_ast(Array<Decl_AST*> globals, AST *current)
             Return_AST *return_ast = static_cast<Return_AST*>(current);
             link_ast(globals, return_ast->expr);
         } break;
-        case AST_Type::primitive_ast: {
-        } break;
-        case AST_Type::string_ast: {
+        case AST_Type::number_ast: 
+        case AST_Type::primitive_ast:
+        case AST_Type::string_ast:
+        case AST_Type::bool_ast: {
         } break;
         default: {
             assert(false);

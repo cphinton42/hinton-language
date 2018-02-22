@@ -177,8 +177,6 @@ internal void set_parent_ast(AST *root, AST *parent_ast)
             set_parent_ast(binary_operator_ast->lhs, parent_ast);
             set_parent_ast(binary_operator_ast->rhs, parent_ast);
         } break;
-        case AST_Type::number_ast: {
-        } break;
         case AST_Type::while_ast: {
             While_AST *while_ast = static_cast<While_AST*>(root);
             while_ast->body->parent.ast = parent_ast;
@@ -237,9 +235,10 @@ internal void set_parent_ast(AST *root, AST *parent_ast)
             Return_AST *return_ast = static_cast<Return_AST*>(root);
             set_parent_ast(return_ast->expr, parent_ast);
         } break;
-        case AST_Type::primitive_ast: {
-        } break;
-        case AST_Type::string_ast: {
+        case AST_Type::number_ast:
+        case AST_Type::primitive_ast:
+        case AST_Type::string_ast:
+        case AST_Type::bool_ast: {
         } break;
         default: {
             assert(false);
@@ -844,6 +843,20 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
         
         ++current;
         result = prim_ast;
+    }
+    else if(current->type == Token_Type::key_true)
+    {
+        Bool_AST *bool_ast = construct_ast(&ctx->ast_pool, Bool_AST, current->line_number, current->line_offset);
+        bool_ast->value = true;
+        ++current;
+        result = bool_ast;
+    }
+    else if(current->type == Token_Type::key_false)
+    {
+        Bool_AST *bool_ast = construct_ast(&ctx->ast_pool, Bool_AST, current->line_number, current->line_offset);
+        bool_ast->value = false;
+        ++current;
+        result = bool_ast;
     }
     else if(current->type == Token_Type::add ||
             current->type == Token_Type::sub ||
@@ -1713,6 +1726,17 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast)
             String_AST *string_ast = static_cast<String_AST*>(ast);
             
             print_buf(pb, "n%ld[label=\"\\\"%.*s\\\"\"];\n", s, string_ast->literal.count, string_ast->literal.data);
+        } break;
+        case AST_Type::bool_ast: {
+            Bool_AST *bool_ast = static_cast<Bool_AST*>(ast);
+            if(bool_ast->value)
+            {
+                print_buf(pb, "n%ld[label=\"true\"];\n", s);
+            }
+            else
+            {
+                print_buf(pb, "n%ld[label=\"false\"];\n", s);
+            }
         } break;
         default: {
             print_err("Unknown AST type in dot printer\n");

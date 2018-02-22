@@ -32,6 +32,7 @@ enum class AST_Type : u16
     return_ast,
     primitive_ast,
     string_ast,
+    bool_ast,
 };
 
 constexpr u16 AST_FLAG_SYNTHETIC = 1;
@@ -151,6 +152,13 @@ struct String_AST : AST
     static constexpr AST_Type type_value = AST_Type::string_ast;
     
     String literal;
+};
+
+struct Bool_AST : AST
+{
+    static constexpr AST_Type type_value = AST_Type::bool_ast;
+    
+    bool value;
 };
 
 enum class Binary_Operator : u64

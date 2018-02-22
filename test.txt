@@ -37,7 +37,6 @@ id5 : u32 = func(bar)[10 + 10].member + 10;
 
 func2 :: () -> u32 {};
 
-true :: 1;
 u8 :: void;
 default_val :: 5;
 ok := 33;
@@ -72,6 +71,8 @@ func3 :: () -> u32 {
 		inner_func();
 	}
 
+	// This is necessary for recursive functions, structs, but needs checking
+	whatever := whatever; 
 	arr :: void;
 
 	for arr {}
