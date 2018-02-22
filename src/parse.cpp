@@ -1,4 +1,6 @@
 
+u32 next_serial = 0;
+
 void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size)
 {
     ctx->program_text = program_text;
@@ -92,6 +94,7 @@ internal Ident_AST make_ident_ast(Token ident)
     Ident_AST result;
     result.type = AST_Type::ident_ast;
     result.flags = 0;
+    result.s = next_serial++;
     result.line_number = ident.line_number;
     result.line_offset = ident.line_offset;
     result.ident = ident.contents;
@@ -105,6 +108,7 @@ internal Number_AST make_number_ast(Token number)
     Number_AST result;
     result.type = AST_Type::number_ast;
     result.flags = 0;
+    result.s = next_serial++;
     result.line_number = number.line_number;
     result.line_offset = number.line_offset;
     result.literal = number.contents;
@@ -115,6 +119,7 @@ internal AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 l
 {
     new_ast->type = type;
     new_ast->flags = 0;
+    new_ast->s = next_serial++;
     new_ast->line_number = line_number;
     new_ast->line_offset = line_offset;
     return new_ast;
@@ -829,12 +834,7 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
     }
     else if(current->type == Token_Type::key_void)
     {
-        Primitive_AST *prim_ast = pool_alloc(Primitive_AST, &ctx->ast_pool, 1);
-        prim_ast->type = AST_Type::primitive_ast;
-        prim_ast->flags = 0;
-        prim_ast->line_number = current->line_number;
-        prim_ast->line_offset = current->line_offset;
-        
+        Primitive_AST *prim_ast = construct_ast(&ctx->ast_pool, Primitive_AST, current->line_number, current->line_offset);
         prim_ast->primitive = Primitive_Type::void_t;
         
         ++current;
@@ -1029,6 +1029,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
             for_ast->array_expr = low_range_expr;
         }
         
+        for_ast->parent = parent;
         for_ast->body->parent.ast = for_ast;
         
         result = for_ast;
@@ -1221,6 +1222,7 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     if(current->type == Token_Type::open_brace)
     {
         result = construct_ast(&ctx->ast_pool, Block_AST, current->line_number, current->line_offset);
+        result->parent = parent;
         ++current;
         
         Parent_Scope new_parent;
@@ -1454,241 +1456,239 @@ Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx)
     return result;
 }
 
-internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial);
-internal inline void print_dot_child(Print_Buffer *pb, AST *child, u64 parent_serial, u64 *serial)
+bool draw_parents = true;
+
+internal void print_dot_rec(Print_Buffer *pb, AST *ast);
+internal inline void print_dot_child(Print_Buffer *pb, AST *child, u64 parent_serial)
 {
-    u64 child_serial = *serial;
+    u64 child_serial = child->s;
     print_buf(pb, "n%ld->n%ld;\n", parent_serial, child_serial);
-    print_dot_rec(pb, child, serial);
+    print_dot_rec(pb, child);
 }
 
-internal void print_dot_rec(Print_Buffer *pb, AST *ast, u64 *serial)
+internal void print_dot_rec(Print_Buffer *pb, AST *ast)
 {
+    u32 s = ast->s;
     switch(ast->type)
     {
         case AST_Type::ident_ast: {
             Ident_AST *ident_ast = static_cast<Ident_AST*>(ast);
-            print_buf(pb, "n%ld[label=\"%.*s\"];\n", (*serial)++, (u32)ident_ast->ident.count, ident_ast->ident.data);
+            print_buf(pb, "n%ld[label=\"%.*s\"];\n", s, (u32)ident_ast->ident.count, ident_ast->ident.data);
+            if(draw_parents && ident_ast->parent.ast)
+            {
+                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, ident_ast->parent.ast->s);
+            }
         } break;
         case AST_Type::decl_ast: {
             Decl_AST *decl_ast = static_cast<Decl_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            print_buf(pb, "n%ld[label=\"Declare %.*s\"];\n", this_serial, (u32)decl_ast->ident.ident.count, decl_ast->ident.ident.data);
+            print_buf(pb, "n%ld[label=\"Declare %.*s\"];\nn%ld[shape=box];\n", s, (u32)decl_ast->ident.ident.count, decl_ast->ident.ident.data, s);
             if(decl_ast->decl_type)
             {
-                print_dot_child(pb, decl_ast->decl_type, this_serial, serial);
+                print_dot_child(pb, decl_ast->decl_type, s);
             }
             if(decl_ast->expr)
             {
-                print_dot_child(pb, decl_ast->expr, this_serial, serial);
+                print_dot_child(pb, decl_ast->expr, s);
+            }
+            if(draw_parents && decl_ast->parent.ast)
+            {
+                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, decl_ast->parent.ast->s);
             }
         } break;
         case AST_Type::block_ast: {
             Block_AST *block_ast = static_cast<Block_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            print_buf(pb, "n%ld[label=\"Block\"];\n", this_serial);
+            print_buf(pb, "n%ld[label=\"Block\"];\nn%ld[shape=box];\n", s, s);
             
             for(u64 i = 0; i < block_ast->statements.count; ++i)
             {
-                print_dot_child(pb, block_ast->statements[i], this_serial, serial);
+                print_dot_child(pb, block_ast->statements[i], s);
+            }
+            if(draw_parents && block_ast->parent.ast)
+            {
+                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, block_ast->parent.ast->s);
             }
         } break;
         case AST_Type::function_type_ast: {
             Function_Type_AST *type_ast = static_cast<Function_Type_AST*>(ast);
-            u64 this_serial = (*serial)++;
-            print_buf(pb, "n%ld[label=\"Function Type\"];\n", this_serial);
+            print_buf(pb, "n%ld[label=\"Function Type\"];\n", s);
             
             for(u64 i = 0; i < type_ast->parameter_types.count; ++i)
             {
                 if(type_ast->parameter_types[i])
                 {
-                    print_dot_child(pb, type_ast->parameter_types[i], this_serial, serial);
+                    print_dot_child(pb, type_ast->parameter_types[i], s);
                 }
             }
             for(u64 i = 0; i < type_ast->return_types.count; ++i)
             {
                 if(type_ast->return_types[i])
                 {
-                    print_dot_child(pb, type_ast->return_types[i], this_serial, serial);
+                    print_dot_child(pb, type_ast->return_types[i], s);
                 }
             }
         } break;
         case AST_Type::function_ast: {
             Function_AST *function_ast = static_cast<Function_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            print_buf(pb, "n%ld[label=\"Function\"];\n", this_serial);
+            print_buf(pb, "n%ld[label=\"Function\"];\nn%ld[shape=box];\n", s, s);
             
-            print_dot_child(pb, function_ast->prototype, this_serial, serial);
+            print_dot_child(pb, function_ast->prototype, s);
             for(u64 i = 0; i < function_ast->param_names.count; ++i)
             {
                 if(function_ast->param_names[i])
                 {
-                    print_dot_child(pb, function_ast->param_names[i], this_serial, serial);
+                    print_dot_child(pb, function_ast->param_names[i], s);
                 }
             }
             for(u64 i = 0; i < function_ast->default_values.count; ++i)
             {
                 if(function_ast->default_values[i])
                 {
-                    print_dot_child(pb, function_ast->default_values[i], this_serial, serial);
+                    print_dot_child(pb, function_ast->default_values[i], s);
                 }
             }
-            print_dot_child(pb, function_ast->block, this_serial, serial);
+            if(draw_parents && function_ast->parent.ast)
+            {
+                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, function_ast->parent.ast->s);
+            }
+            print_dot_child(pb, function_ast->block, s);
         } break;
         case AST_Type::function_call_ast: {
             Function_Call_AST *call_ast = static_cast<Function_Call_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            print_buf(pb, "n%ld[label=\"function call\"];\n", this_serial);
-            print_dot_child(pb, call_ast->function, this_serial, serial);
+            print_buf(pb, "n%ld[label=\"function call\"];\n", s);
+            print_dot_child(pb, call_ast->function, s);
             for(u64 i = 0; i < call_ast->args.count; ++i)
             {
-                print_dot_child(pb, call_ast->args[i], this_serial, serial);
+                print_dot_child(pb, call_ast->args[i], s);
             }
         } break;
         case AST_Type::binary_operator_ast: {
             Binary_Operator_AST *bin_ast = static_cast<Binary_Operator_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, binary_operator_names[(u64)bin_ast->op]);
-            print_dot_child(pb, bin_ast->lhs, this_serial, serial);
-            print_dot_child(pb, bin_ast->rhs, this_serial, serial);
+            print_buf(pb, "n%ld[label=\"%s\"];\n", s, binary_operator_names[(u64)bin_ast->op]);
+            print_dot_child(pb, bin_ast->lhs, s);
+            print_dot_child(pb, bin_ast->rhs, s);
         } break;
         case AST_Type::number_ast: {
             Number_AST *number_ast = static_cast<Number_AST*>(ast);
-            print_buf(pb, "n%ld[label=\"%.*s\"];\n", (*serial)++, (u32)number_ast->literal.count, number_ast->literal.data);
+            print_buf(pb, "n%ld[label=\"%.*s\"];\n", s, (u32)number_ast->literal.count, number_ast->literal.data);
         } break;
         case AST_Type::while_ast: {
             While_AST *while_ast = static_cast<While_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"while\"];\n", this_serial);
-            print_dot_child(pb, while_ast->guard, this_serial, serial);
-            print_dot_child(pb, while_ast->body, this_serial, serial);
+            print_buf(pb, "n%ld[label=\"while\"];\n", s);
+            print_dot_child(pb, while_ast->guard, s);
+            print_dot_child(pb, while_ast->body, s);
         } break;
         case AST_Type::for_ast: {
             For_AST *for_ast = static_cast<For_AST*>(ast);
-            
-            u64 this_serial = (*serial)++;
             
             if(for_ast->flags & FOR_FLAG_OVER_ARRAY)
             {
                 if(for_ast->flags & FOR_FLAG_BY_POINTER)
                 {
-                    print_buf(pb, "n%ld[label=\"for &(array)\"];\n", this_serial);
+                    print_buf(pb, "n%ld[label=\"for &(array)\"];\n", s);
                 }
                 else
                 {
-                    print_buf(pb, "n%ld[label=\"for (array)\"];\n", this_serial);
+                    print_buf(pb, "n%ld[label=\"for (array)\"];\n", s);
                 }
             }
             else
             {
                 assert(!(for_ast->flags & FOR_FLAG_BY_POINTER));
-                print_buf(pb, "n%ld[label=\"for (range)\"];\n", this_serial);
+                print_buf(pb, "n%ld[label=\"for (range)\"];\n", s);
+            }
+            print_buf(pb, "n%ld[shape=box];\n", s);
+            if(draw_parents && for_ast->parent.ast)
+            {
+                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, for_ast->parent.ast->s);
             }
             
             if(for_ast->induction_var)
             {
-                print_dot_child(pb, for_ast->induction_var, this_serial, serial);
+                print_dot_child(pb, for_ast->induction_var, s);
             }
             if(for_ast->flags & FOR_FLAG_OVER_ARRAY)
             {
                 if(for_ast->index_var)
                 {
-                    print_dot_child(pb, for_ast->index_var, this_serial, serial);
+                    print_dot_child(pb, for_ast->index_var, s);
                 }
-                print_dot_child(pb, for_ast->array_expr, this_serial, serial);
+                print_dot_child(pb, for_ast->array_expr, s);
             }
             else
             {
-                print_dot_child(pb, for_ast->low_expr, this_serial, serial);
-                print_dot_child(pb, for_ast->high_expr, this_serial, serial);
+                print_dot_child(pb, for_ast->low_expr, s);
+                print_dot_child(pb, for_ast->high_expr, s);
             }
             
-            print_dot_child(pb, for_ast->body, this_serial, serial);
+            print_dot_child(pb, for_ast->body, s);
         } break;
         case AST_Type::if_ast: {
             If_AST *if_ast = static_cast<If_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"if\"];\n", this_serial);
-            print_dot_child(pb, if_ast->guard, this_serial, serial);
-            print_dot_child(pb, if_ast->then_block, this_serial, serial);
+            print_buf(pb, "n%ld[label=\"if\"];\n", s);
+            print_dot_child(pb, if_ast->guard, s);
+            print_dot_child(pb, if_ast->then_block, s);
             if(if_ast->else_block)
             {
-                print_dot_child(pb, if_ast->else_block, this_serial, serial);
+                print_dot_child(pb, if_ast->else_block, s);
             }
         } break;
         case AST_Type::struct_ast: {
             Struct_AST *struct_ast = static_cast<Struct_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"struct\"];\n", this_serial);
+            print_buf(pb, "n%ld[label=\"struct\"];\n", s);
             for(u64 i = 0; i < struct_ast->constants.count; ++i)
             {
-                print_dot_child(pb, struct_ast->constants[i], this_serial, serial);
+                print_dot_child(pb, struct_ast->constants[i], s);
             }
             for(u64 i = 0; i < struct_ast->fields.count; ++i)
             {
-                print_dot_child(pb, struct_ast->fields[i], this_serial, serial);
+                print_dot_child(pb, struct_ast->fields[i], s);
             }
         } break;
         case AST_Type::enum_ast: {
             Enum_AST *enum_ast = static_cast<Enum_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"enum\"];\n", this_serial);
+            print_buf(pb, "n%ld[label=\"enum\"];\n", s);
             for(u64 i = 0; i < enum_ast->values.count; ++i)
             {
-                print_dot_child(pb, enum_ast->values[i], this_serial, serial);
+                print_dot_child(pb, enum_ast->values[i], s);
             }
         } break;
         case AST_Type::assign_ast: {
             Assign_AST *assign_ast = static_cast<Assign_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, assign_names[(u64)assign_ast->assign_type]);
-            print_dot_child(pb, &assign_ast->ident, this_serial, serial);
-            print_dot_child(pb, assign_ast->rhs, this_serial, serial);
+            print_buf(pb, "n%ld[label=\"%s\"];\n", s, assign_names[(u64)assign_ast->assign_type]);
+            print_dot_child(pb, &assign_ast->ident, s);
+            print_dot_child(pb, assign_ast->rhs, s);
         } break;
         case AST_Type::unary_ast: {
             Unary_Operator_AST *unary_ast = static_cast<Unary_Operator_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, unary_operator_names[(u64)unary_ast->op]);
-            print_dot_child(pb, unary_ast->operand, this_serial, serial);
+            print_buf(pb, "n%ld[label=\"%s\"];\n", s, unary_operator_names[(u64)unary_ast->op]);
+            print_dot_child(pb, unary_ast->operand, s);
         } break;
         case AST_Type::return_ast: {
             Return_AST *return_ast = static_cast<Return_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"return\"];\n", this_serial);
-            print_dot_child(pb, return_ast->expr, this_serial, serial);
+            print_buf(pb, "n%ld[label=\"return\"];\n", s);
+            print_dot_child(pb, return_ast->expr, s);
         } break;
         case AST_Type::primitive_ast: {
             Primitive_AST *primitive_ast = static_cast<Primitive_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"%s\"];\n", this_serial, primitive_names[(u64)primitive_ast->primitive]);
+            print_buf(pb, "n%ld[label=\"%s\"];\n", s, primitive_names[(u64)primitive_ast->primitive]);
         } break;
         case AST_Type::string_ast: {
             String_AST *string_ast = static_cast<String_AST*>(ast);
             
-            u64 this_serial = (*serial)++;
-            
-            print_buf(pb, "n%ld[label=\"\\\"%.*s\\\"\"];\n", this_serial, string_ast->literal.count, string_ast->literal.data);
+            print_buf(pb, "n%ld[label=\"\\\"%.*s\\\"\"];\n", s, string_ast->literal.count, string_ast->literal.data);
         } break;
         default: {
             print_err("Unknown AST type in dot printer\n");
@@ -1700,10 +1700,9 @@ void print_dot(Print_Buffer *pb, Array<Decl_AST*> decls)
 {
     print_buf(pb, "digraph decls {\n");
     
-    u64 s = 0;
     for(u64 i = 0; i < decls.count; ++i)
     {
-        print_dot_rec(pb, decls[i], &s);
+        print_dot_rec(pb, decls[i]);
     }
     
     print_buf(pb, "}\n");

@@ -12,7 +12,7 @@ struct Parsing_Context
     Pool_Allocator ast_pool;
 };
 
-enum class AST_Type : u32
+enum class AST_Type : u16
 {
     ident_ast,
     decl_ast,
@@ -34,18 +34,21 @@ enum class AST_Type : u32
     string_ast,
 };
 
-constexpr u32 DECL_FLAG_CONSTANT = 1;
+constexpr u16 DECL_FLAG_CONSTANT = 1;
 
-constexpr u32 FOR_FLAG_BY_POINTER = 1;
-constexpr u32 FOR_FLAG_OVER_ARRAY = 2;
+constexpr u16 FOR_FLAG_BY_POINTER = 1;
+constexpr u16 FOR_FLAG_OVER_ARRAY = 2;
 
 struct AST
 {
     AST_Type type;
-    u32 flags;
+    u16 flags;
+    u32 s;
     u32 line_number;
     u32 line_offset;
 };
+
+extern u32 next_serial;
 
 struct Parent_Scope
 {
