@@ -42,6 +42,9 @@ constexpr u16 DECL_FLAG_CONSTANT = 2;
 constexpr u16 FOR_FLAG_BY_POINTER = 2;
 constexpr u16 FOR_FLAG_OVER_ARRAY = 4;
 
+constexpr u16 NUMBER_FLAG_FLOATLIKE = 2;
+
+
 struct AST
 {
     AST_Type type;
@@ -61,21 +64,62 @@ struct Parent_Scope
 
 enum class Primitive_Type : u64
 {
-    /* u8,
-    u16,
-    u32,
-    u64,
-    s8,
-    s16,
-    s32,
-    s64,
-    f32,
-    f64, */
-    void_t,
+    size_1 = 0x1,
+    size_2 = 0x2,
+    size_4 = 0x3,
+    size_8 = 0x4,
+    size_mask = 0x7,
+    sign_flag = 0x8,
+    
+    int_like = 0x10,
+    bool_like = 0x20,
+    float_like = 0x30,
+    likeness_mask = 0x30,
+    
+    u8_t = 0x11,
+    u16_t = 0x12,
+    u32_t = 0x13,
+    u64_t = 0x14,
+    uint_t = 0x14,
+    
+    s8_t = 0x19,
+    s16_t = 0x1A,
+    s32_t = 0x1B,
+    s64_t = 0x1C,
+    int_t = 0x1C,
+    
+    bool_t = 0x21,
+    bool8_t = 0x21,
+    bool16_t = 0x22,
+    bool32_t = 0x23,
+    bool64_t = 0x24,
+    
+    f32_t = 0x3B,
+    f64_t = 0x3C,
+    
+    void_t = 0x0,
 };
 
 const byte *primitive_names[] = {
     "void",
+    "","","","","","","","","","","","","","","","",
+    "u8",
+    "u16",
+    "u32",
+    "u64",
+    "","","","",
+    "s8",
+    "s16",
+    "s32",
+    "s64",
+    "","","","",
+    "bool8",
+    "bool16",
+    "bool32",
+    "bool64",
+    "","","","","","","","","","","","","","","","","","","","","",
+    "f32",
+    "f64",
 };
 
 struct Primitive_AST : AST
@@ -145,6 +189,11 @@ struct Number_AST : AST
     static constexpr AST_Type type_value = AST_Type::number_ast;
     
     String literal;
+    union
+    {
+        u64 int_value;
+        f64 float_value;
+    };
 };
 
 struct String_AST : AST
@@ -152,6 +201,7 @@ struct String_AST : AST
     static constexpr AST_Type type_value = AST_Type::string_ast;
     
     String literal;
+    String value;
 };
 
 struct Bool_AST : AST

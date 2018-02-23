@@ -17,8 +17,11 @@
 ### Misc TODO's
 
  - Create general allocator interface (? maybe just make it more uniform ?)
+   For example, to supply to array_add
+ - Make an array_trim
  - Cleanup memory leaks in parsing
  - Put newline on errors at the end of file that doesn't end in a newline
+ - Other escape sequences in strings (such as \UXXXXXX)
 
 ### Needed to be a serious language
 
@@ -30,6 +33,7 @@
 ### Other TODO's
 
  - are built-in types keywords, or just bound identifiers?
+   - leaning towards keywords
  - built-in array type, string type
  - vector types (SIMD)
 

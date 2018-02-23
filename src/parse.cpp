@@ -112,6 +112,83 @@ internal Number_AST make_number_ast(Token number)
     result.line_number = number.line_number;
     result.line_offset = number.line_offset;
     result.literal = number.contents;
+    
+    String literal = result.literal;
+    u64 i_value = 0;
+    
+    // TODO: cleanup: better precision
+    
+    u64 i = 0;
+    while(i < literal.count && '0' <= literal[i] && literal[i] <= '9')
+    {
+        i_value *= 10;
+        i_value += literal[i] - '0';
+        ++i;
+    }
+    
+    if(i < literal.count)
+    {
+        assert(literal[i] == '.');
+        ++i;
+        
+        f64 factor = 1.0;
+        u64 fractional = 0;
+        
+        while(i < literal.count && '0' <= literal[i] && literal[i] <= '9')
+        {
+            fractional *= 10;
+            fractional += literal[i] - '0';
+            factor *= 0.1;
+            ++i;
+        }
+        
+        if(i < literal.count)
+        {
+            assert(literal[i] == 'e' || literal[i] == 'E');
+            ++i;
+            assert(i < literal.count);
+            bool exponent_positive = true;
+            if(literal[i] == '+')
+            {
+                exponent_positive = true;
+            }
+            else if(literal[i] == '-')
+            {
+                exponent_positive = false;
+            }
+            
+            u64 exponent = 0;
+            while(i < literal.count && '0' <= literal[i] && literal[i] <= '9')
+            {
+                exponent *= 10;
+                exponent += literal[i] - '0';
+                ++i;
+            }
+            
+            if(exponent_positive)
+            {
+                for(u64 j = 0; j < exponent; ++j)
+                {
+                    factor *= 10.0;
+                }
+            }
+            else
+            {
+                for(u64 j = 0; j < exponent; ++j)
+                {
+                    factor *= 0.1;
+                }
+            }
+        }
+        
+        result.float_value = ((f64)i_value) + ((f64)fractional * factor);
+        result.flags |= NUMBER_FLAG_FLOATLIKE;
+    }
+    else
+    {
+        result.int_value = i_value;
+    }
+    
     return result;
 }
 
@@ -490,417 +567,547 @@ internal AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
         *current_ptr = current;
     };
     
-    if(current->type == Token_Type::ident)
+    switch(current->type)
     {
-        Ident_AST *result_ident = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
-        *result_ident = make_ident_ast(*current);
-        result_ident->parent = parent;
-        result = result_ident;
-        ++current;
-    }
-    else if(current->type == Token_Type::key_enum)
-    {
-        u32 line_number = current->line_number;
-        u32 line_offset = current->line_offset;
-        
-        ++current;
-        Dynamic_Array<Decl_AST*> values = {0};
-        
-        if(current->type != Token_Type::open_brace)
-        {
-            report_error(ctx, start_section, current, "Expected '{'");
-            return nullptr;
-        }
-        ++current;
-        
-        while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
-        {
-            Decl_AST *decl = parse_decl(ctx, &current, parent, Decl_Type::Enum);
-            if(!decl)
-            {
-                return nullptr;
-            }
-            array_add(&values, decl);
-        }
-        
-        if(current->type != Token_Type::close_brace)
-        {
-            report_error(ctx, start_section, current, "Expected '}'");
-            return nullptr;
-        }
-        ++current;
-        
-        Enum_AST *enum_ast = construct_ast(&ctx->ast_pool, Enum_AST, line_number, line_offset);
-        enum_ast->values.count = values.count;
-        enum_ast->values.data = pool_alloc(Decl_AST*, &ctx->ast_pool, values.count);
-        for(u64 i = 0; i < values.count; ++i)
-        {
-            enum_ast->values[i] = values[i];
-        }
-        result = enum_ast;
-    }
-    else if(current->type == Token_Type::key_struct)
-    {
-        u32 line_number = current->line_number;
-        u32 line_offset = current->line_offset;
-        
-        ++current;
-        Dynamic_Array<Decl_AST*> decls = {0};
-        
-        if(current->type != Token_Type::open_brace)
-        {
-            report_error(ctx, start_section, current, "Expected '{'");
-            return nullptr;
-        }
-        ++current;
-        
-        u64 var_count = 0;
-        u64 const_count = 0;
-        
-        while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
-        {
-            Decl_AST *decl = parse_decl(ctx, &current, parent, Decl_Type::Struct);
-            if(!decl)
-            {
-                return nullptr;
-            }
-            if(decl->flags & DECL_FLAG_CONSTANT)
-            {
-                ++const_count;
-            }
-            else
-            {
-                ++var_count;
-            }
-            array_add(&decls, decl);
-        }
-        
-        if(current->type != Token_Type::close_brace)
-        {
-            report_error(ctx, start_section, current, "Expected '}'");
-            return nullptr;
-        }
-        ++current;
-        
-        Struct_AST *struct_ast = construct_ast(&ctx->ast_pool, Struct_AST, line_number, line_offset);
-        
-        struct_ast->constants.count = const_count;
-        struct_ast->fields.count = var_count;
-        struct_ast->constants.data = pool_alloc(Decl_AST*, &ctx->ast_pool, const_count);
-        struct_ast->fields.data = pool_alloc(Decl_AST*, &ctx->ast_pool, var_count);
-        
-        u64 const_i = 0;
-        u64 var_i = 0;
-        
-        for(u64 i = 0; i < decls.count; ++i)
-        {
-            Decl_AST *decl = decls[i];
-            if(decl->flags & DECL_FLAG_CONSTANT)
-            {
-                struct_ast->constants[const_i++] = decl;
-            }
-            else
-            {
-                struct_ast->fields[var_i++] = decl;
-            }
-        }
-        result = struct_ast;
-    }
-    else if(current->type == Token_Type::open_paren)
-    {
-        // This could be a parenthesized expression, a function type, or a function literal
-        
-        u32 line_number = current->line_number;
-        u32 line_offset = current->line_offset;
-        
-        ++current;
-        
-        Dynamic_Array<Parameter_AST> parameters = {0};
-        
-        bool expect_more = (current->type != Token_Type::eof && current->type != Token_Type::close_paren);
-        bool must_be_func = false;
-        bool must_have_body = false;
-        
-        Parent_Scope blank_parent;
-        blank_parent.ast = nullptr;
-        blank_parent.index = 0; // TODO: does this matter?
-        
-        while(expect_more)
-        {
-            Ident_AST *ident = nullptr;
-            AST *type = nullptr;
-            AST *default_value = nullptr;
+        case Token_Type::ident: {
+            Ident_AST *result_ident = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
+            *result_ident = make_ident_ast(*current);
+            result_ident->parent = parent;
+            result = result_ident;
+            ++current;
+        } break;
+        case Token_Type::key_enum: {
+            u32 line_number = current->line_number;
+            u32 line_offset = current->line_offset;
             
-            AST *expr = parse_expr(ctx, &current, blank_parent);
-            if(!expr)
+            ++current;
+            Dynamic_Array<Decl_AST*> values = {0};
+            
+            if(current->type != Token_Type::open_brace)
             {
+                report_error(ctx, start_section, current, "Expected '{'");
                 return nullptr;
             }
-            // expr could be parameter name, parameter type, or maybe an expr, depending on must_be_func
+            ++current;
             
-            if(expr->type == AST_Type::ident_ast)
+            while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
             {
-                // If there is a ':' or ':=' the identifier must be a parameter name
-                // Otherwise, it could be a Type, or just a parenthesized expression
-                
-                bool expect_default = false;
-                if(current->type == Token_Type::colon)
+                Decl_AST *decl = parse_decl(ctx, &current, parent, Decl_Type::Enum);
+                if(!decl)
                 {
-                    ++current;
-                    must_be_func = true;
-                    
-                    ident = static_cast<Ident_AST*>(expr);
-                    type = parse_expr(ctx, &current, blank_parent);
-                    
-                    if(!type)
-                    {
-                        return nullptr;
-                    }
-                    if(current->type == Token_Type::equal)
-                    {
-                        ++current;
-                        expect_default = true;
-                    }
+                    return nullptr;
                 }
-                else if(current->type == Token_Type::colon_eq)
+                array_add(&values, decl);
+            }
+            
+            if(current->type != Token_Type::close_brace)
+            {
+                report_error(ctx, start_section, current, "Expected '}'");
+                return nullptr;
+            }
+            ++current;
+            
+            Enum_AST *enum_ast = construct_ast(&ctx->ast_pool, Enum_AST, line_number, line_offset);
+            enum_ast->values.count = values.count;
+            enum_ast->values.data = pool_alloc(Decl_AST*, &ctx->ast_pool, values.count);
+            for(u64 i = 0; i < values.count; ++i)
+            {
+                enum_ast->values[i] = values[i];
+            }
+            result = enum_ast;
+        } break;
+        case Token_Type::key_struct: {
+            u32 line_number = current->line_number;
+            u32 line_offset = current->line_offset;
+            
+            ++current;
+            Dynamic_Array<Decl_AST*> decls = {0};
+            
+            if(current->type != Token_Type::open_brace)
+            {
+                report_error(ctx, start_section, current, "Expected '{'");
+                return nullptr;
+            }
+            ++current;
+            
+            u64 var_count = 0;
+            u64 const_count = 0;
+            
+            while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
+            {
+                Decl_AST *decl = parse_decl(ctx, &current, parent, Decl_Type::Struct);
+                if(!decl)
                 {
-                    ++current;
-                    must_be_func = true;
-                    
-                    ident = static_cast<Ident_AST*>(expr);
-                    // type needs to be inferred
-                    expect_default = true;
+                    return nullptr;
+                }
+                if(decl->flags & DECL_FLAG_CONSTANT)
+                {
+                    ++const_count;
                 }
                 else
                 {
+                    ++var_count;
+                }
+                array_add(&decls, decl);
+            }
+            
+            if(current->type != Token_Type::close_brace)
+            {
+                report_error(ctx, start_section, current, "Expected '}'");
+                return nullptr;
+            }
+            ++current;
+            
+            Struct_AST *struct_ast = construct_ast(&ctx->ast_pool, Struct_AST, line_number, line_offset);
+            
+            struct_ast->constants.count = const_count;
+            struct_ast->fields.count = var_count;
+            struct_ast->constants.data = pool_alloc(Decl_AST*, &ctx->ast_pool, const_count);
+            struct_ast->fields.data = pool_alloc(Decl_AST*, &ctx->ast_pool, var_count);
+            
+            u64 const_i = 0;
+            u64 var_i = 0;
+            
+            for(u64 i = 0; i < decls.count; ++i)
+            {
+                Decl_AST *decl = decls[i];
+                if(decl->flags & DECL_FLAG_CONSTANT)
+                {
+                    struct_ast->constants[const_i++] = decl;
+                }
+                else
+                {
+                    struct_ast->fields[var_i++] = decl;
+                }
+            }
+            result = struct_ast;
+        } break;
+        case Token_Type::open_paren: {
+            // This could be a parenthesized expression, a function type, or a function literal
+            
+            u32 line_number = current->line_number;
+            u32 line_offset = current->line_offset;
+            
+            ++current;
+            
+            Dynamic_Array<Parameter_AST> parameters = {0};
+            
+            bool expect_more = (current->type != Token_Type::eof && current->type != Token_Type::close_paren);
+            bool must_be_func = false;
+            bool must_have_body = false;
+            
+            Parent_Scope blank_parent;
+            blank_parent.ast = nullptr;
+            blank_parent.index = 0; // TODO: does this matter?
+            
+            while(expect_more)
+            {
+                Ident_AST *ident = nullptr;
+                AST *type = nullptr;
+                AST *default_value = nullptr;
+                
+                AST *expr = parse_expr(ctx, &current, blank_parent);
+                if(!expr)
+                {
+                    return nullptr;
+                }
+                // expr could be parameter name, parameter type, or maybe an expr, depending on must_be_func
+                
+                if(expr->type == AST_Type::ident_ast)
+                {
+                    // If there is a ':' or ':=' the identifier must be a parameter name
+                    // Otherwise, it could be a Type, or just a parenthesized expression
+                    
+                    bool expect_default = false;
+                    if(current->type == Token_Type::colon)
+                    {
+                        ++current;
+                        must_be_func = true;
+                        
+                        ident = static_cast<Ident_AST*>(expr);
+                        type = parse_expr(ctx, &current, blank_parent);
+                        
+                        if(!type)
+                        {
+                            return nullptr;
+                        }
+                        if(current->type == Token_Type::equal)
+                        {
+                            ++current;
+                            expect_default = true;
+                        }
+                    }
+                    else if(current->type == Token_Type::colon_eq)
+                    {
+                        ++current;
+                        must_be_func = true;
+                        
+                        ident = static_cast<Ident_AST*>(expr);
+                        // type needs to be inferred
+                        expect_default = true;
+                    }
+                    else
+                    {
+                        type = expr;
+                    }
+                    
+                    if(expect_default)
+                    {
+                        must_have_body = true;
+                        default_value = parse_expr(ctx, &current, blank_parent);
+                        if(!default_value)
+                        {
+                            return nullptr;
+                        }
+                    }
+                }
+                else
+                {
+                    // Expr is not a parameter name, it could be unnamed parameter, or just a parethesized expression
                     type = expr;
                 }
                 
-                if(expect_default)
+                array_add(&parameters, {ident,type,default_value});
+                
+                if(current->type == Token_Type::comma)
                 {
-                    must_have_body = true;
-                    default_value = parse_expr(ctx, &current, blank_parent);
-                    if(!default_value)
+                    ++current;
+                    must_be_func = true;
+                    expect_more = true;
+                }
+                else
+                {
+                    expect_more = false;
+                }
+                ++blank_parent.index;
+            }
+            
+            if(current->type != Token_Type::close_paren)
+            {
+                report_error(ctx, start_section, current, "Expected ')'");
+                return nullptr;
+            }
+            
+            ++current;
+            
+            if(current->type == Token_Type::arrow)
+            {
+                ++current;
+            }
+            else if(must_be_func)
+            {
+                report_error(ctx, start_section, current, "Expected '->'");
+                return nullptr;
+            }
+            else
+            {
+                // It was just a parenthesized expression
+                // TODO: fix memory leak
+                assert(parameters.count == 1);
+                assert(parameters[0].name == nullptr);
+                assert(parameters[0].type != nullptr);
+                assert(parameters[0].default_value == nullptr);
+                
+                AST *result = parameters[0].type;
+                if(parent.ast)
+                {
+                    set_parent_ast(result, parent.ast);
+                }
+                return result;
+            }
+            
+            // Now parse return type
+            AST *return_type = parse_expr(ctx, &current, blank_parent);
+            if(!return_type)
+            {
+                return nullptr;
+            }
+            
+            Block_AST *block = nullptr;
+            
+            if(current->type == Token_Type::open_brace)
+            {
+                Parent_Scope block_parent;
+                block_parent.ast = nullptr; // Will be filled in later
+                block_parent.index = parameters.count;
+                
+                block = parse_statement_block(ctx, &current, block_parent);
+                if(!block)
+                {
+                    return nullptr;
+                }
+            }
+            else if(must_have_body)
+            {
+                report_error(ctx, start_section, current, "Expected '{'. Only function literals can have default types, not function types");
+                return nullptr;
+            }
+            
+            
+            Function_Type_AST *func_type = construct_ast(&ctx->ast_pool, Function_Type_AST, line_number, line_offset);
+            
+            func_type->parameter_types.count = parameters.count;
+            func_type->parameter_types.data = pool_alloc(AST*, &ctx->ast_pool, parameters.count);
+            
+            func_type->return_types.count = 1;
+            func_type->return_types.data = pool_alloc(AST*, &ctx->ast_pool, 1);
+            func_type->return_types[0] = return_type;
+            
+            if(block)
+            {
+                Function_AST *result_func = construct_ast(&ctx->ast_pool, Function_AST, line_number, line_offset);
+                
+                result_func->prototype = func_type;
+                result_func->block = block;
+                
+                result_func->param_names.count = parameters.count;
+                result_func->param_names.data = pool_alloc(Ident_AST*, &ctx->ast_pool, parameters.count);
+                result_func->default_values.count = parameters.count;
+                result_func->default_values.data = pool_alloc(AST*, &ctx->ast_pool, parameters.count);
+                result_func->parent = parent;
+                
+                for(u64 i = 0; i < parameters.count; ++i)
+                {
+                    func_type->parameter_types[i] = parameters[i].type;
+                    result_func->param_names[i] = parameters[i].name;
+                    result_func->default_values[i] = parameters[i].default_value;
+                    if(result_func->default_values[i])
                     {
-                        return nullptr;
+                        set_parent_ast(result_func->default_values[i], result_func);
+                    }
+                }
+                
+                if(parent.ast)
+                {
+                    set_parent_ast(result_func, parent.ast);
+                }
+                set_parent_ast(block, result_func);
+                result = result_func;
+            }
+            else
+            {
+                for(u64 i = 0; i < parameters.count; ++i)
+                {
+                    func_type->parameter_types[i] = parameters[i].type;
+                }
+                if(parent.ast)
+                {
+                    set_parent_ast(func_type, parent.ast);
+                }
+                result = func_type;
+            }
+        } break;
+        case Token_Type::number: {
+            Number_AST *result_number = pool_alloc(Number_AST, &ctx->ast_pool, 1);
+            *result_number = make_number_ast(*current);
+            result = result_number;
+            ++current;
+        } break;
+        case Token_Type::string: {
+            String_AST *result_string = construct_ast(&ctx->ast_pool, String_AST, current->line_number, current->line_offset);
+            result_string->literal = current->contents;
+            
+            String literal = result_string->literal;
+            u64 new_size = 0;
+            bool needs_interpretation = false;
+            for(u64 i = 0; i < literal.count; ++i)
+            {
+                if(literal[i] == '\\')
+                {
+                    ++i;
+                    needs_interpretation = true;
+                }
+                ++new_size;
+            }
+            if(needs_interpretation)
+            {
+                String value;
+                value.count = new_size;
+                value.data = pool_alloc(byte, &ctx->ast_pool, new_size);
+                
+                u64 value_i = 0;
+                for(u64 i = 0; i < literal.count; ++i)
+                {
+                    if(literal[i] == '\\')
+                    {
+                        ++i;
+                        if(literal[i] == 'n')
+                        {
+                            value[value_i++] = '\n';
+                        }
+                        else if(literal[i] == 't')
+                        {
+                            value[value_i++] = '\t';
+                        }
+                        else
+                        {
+                            value[value_i++] = literal[i];
+                        }
+                    }
+                    else
+                    {
+                        value[value_i++] = literal[i];
                     }
                 }
             }
             else
             {
-                // Expr is not a parameter name, it could be unnamed parameter, or just a parethesized expression
-                type = expr;
+                result_string->value = result_string->literal;
             }
             
-            array_add(&parameters, {ident,type,default_value});
-            
-            if(current->type == Token_Type::comma)
-            {
-                ++current;
-                must_be_func = true;
-                expect_more = true;
-            }
-            else
-            {
-                expect_more = false;
-            }
-            ++blank_parent.index;
-        }
-        
-        if(current->type != Token_Type::close_paren)
-        {
-            report_error(ctx, start_section, current, "Expected ')'");
-            return nullptr;
-        }
-        
-        ++current;
-        
-        if(current->type == Token_Type::arrow)
-        {
+            result = result_string;
             ++current;
-        }
-        else if(must_be_func)
+        } break;
+        
         {
-            report_error(ctx, start_section, current, "Expected '->'");
-            return nullptr;
-        }
-        else
-        {
-            // It was just a parenthesized expression
-            // TODO: fix memory leak
-            assert(parameters.count == 1);
-            assert(parameters[0].name == nullptr);
-            assert(parameters[0].type != nullptr);
-            assert(parameters[0].default_value == nullptr);
+            Primitive_Type prim_type;
             
-            AST *result = parameters[0].type;
-            if(parent.ast)
-            {
-                set_parent_ast(result, parent.ast);
+            case Token_Type::key_bool: {
+                prim_type = Primitive_Type::bool_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_bool8: {
+                prim_type = Primitive_Type::bool8_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_bool16: {
+                prim_type = Primitive_Type::bool16_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_bool32: {
+                prim_type = Primitive_Type::bool32_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_bool64: {
+                prim_type = Primitive_Type::bool64_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_s8: {
+                prim_type = Primitive_Type::s8_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_s16: {
+                prim_type = Primitive_Type::s16_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_s32: {
+                prim_type = Primitive_Type::s32_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_s64: {
+                prim_type = Primitive_Type::s64_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_int: {
+                prim_type = Primitive_Type::int_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_u8: {
+                prim_type = Primitive_Type::u8_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_u16: {
+                prim_type = Primitive_Type::u16_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_u32: {
+                prim_type = Primitive_Type::u32_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_u64: {
+                prim_type = Primitive_Type::u64_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_uint: {
+                prim_type = Primitive_Type::uint_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_f32: {
+                prim_type = Primitive_Type::f32_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_f64: {
+                prim_type = Primitive_Type::f64_t;
+                goto make_primitive_type_ast;
+            } break;
+            case Token_Type::key_void: {
+                prim_type = Primitive_Type::void_t;
+                goto make_primitive_type_ast;
+            } break;
+            
+            // TODO: these can be 'interned'
+            
+            make_primitive_type_ast:
+            
+            Primitive_AST *prim_ast = construct_ast(&ctx->ast_pool, Primitive_AST, current->line_number, current->line_offset);
+            prim_ast->primitive = prim_type;
+            
+            ++current;
+            result = prim_ast;
+        } break;
+        
+        {
+            bool bool_value;
+            
+            case Token_Type::key_true: {
+                bool_value = true;
+                goto make_bool_ast;
             }
-            return result;
-        }
-        
-        // Now parse return type
-        AST *return_type = parse_expr(ctx, &current, blank_parent);
-        if(!return_type)
-        {
-            return nullptr;
-        }
-        
-        Block_AST *block = nullptr;
-        
-        if(current->type == Token_Type::open_brace)
-        {
-            Parent_Scope block_parent;
-            block_parent.ast = nullptr; // Will be filled in later
-            block_parent.index = parameters.count;
+            case Token_Type::key_false: {
+                bool_value = false;
+                goto make_bool_ast;
+            }
+            make_bool_ast:
             
-            block = parse_statement_block(ctx, &current, block_parent);
-            if(!block)
+            Bool_AST *bool_ast = construct_ast(&ctx->ast_pool, Bool_AST, current->line_number, current->line_offset);
+            bool_ast->value = bool_value;
+            ++current;
+            result = bool_ast;
+        } break;
+        
+        {
+            Unary_Operator unary_op;
+            
+            case Token_Type::add: {
+                unary_op = Unary_Operator::plus;
+                goto make_unary_operator_ast;
+            }
+            case Token_Type::sub: {
+                unary_op = Unary_Operator::minus;
+                goto make_unary_operator_ast;
+            }
+            case Token_Type::mul: {
+                unary_op = Unary_Operator::deref;
+                goto make_unary_operator_ast;
+            }
+            case Token_Type::ref: {
+                unary_op = Unary_Operator::ref;
+                goto make_unary_operator_ast;
+            }
+            case Token_Type::lnot: {
+                unary_op = Unary_Operator::lnot;
+                goto make_unary_operator_ast;
+            }
+            make_unary_operator_ast:
+            
+            u32 line_number = current->line_number;
+            u32 line_offset = current->line_offset;
+            
+            ++current;
+            AST *operand = parse_expr(ctx, &current, parent, precedence);
+            if(!operand)
             {
                 return nullptr;
             }
-        }
-        else if(must_have_body)
-        {
-            report_error(ctx, start_section, current, "Expected '{'. Only function literals can have default types, not function types");
-            return nullptr;
-        }
-        
-        
-        Function_Type_AST *func_type = construct_ast(&ctx->ast_pool, Function_Type_AST, line_number, line_offset);
-        
-        func_type->parameter_types.count = parameters.count;
-        func_type->parameter_types.data = pool_alloc(AST*, &ctx->ast_pool, parameters.count);
-        
-        func_type->return_types.count = 1;
-        func_type->return_types.data = pool_alloc(AST*, &ctx->ast_pool, 1);
-        func_type->return_types[0] = return_type;
-        
-        if(block)
-        {
-            Function_AST *result_func = construct_ast(&ctx->ast_pool, Function_AST, line_number, line_offset);
             
-            result_func->prototype = func_type;
-            result_func->block = block;
+            Unary_Operator_AST *unary_ast = construct_ast(&ctx->ast_pool, Unary_Operator_AST, line_number, line_offset);
+            unary_ast->op = unary_op;
+            unary_ast->operand = operand;
             
-            result_func->param_names.count = parameters.count;
-            result_func->param_names.data = pool_alloc(Ident_AST*, &ctx->ast_pool, parameters.count);
-            result_func->default_values.count = parameters.count;
-            result_func->default_values.data = pool_alloc(AST*, &ctx->ast_pool, parameters.count);
-            result_func->parent = parent;
-            
-            for(u64 i = 0; i < parameters.count; ++i)
-            {
-                func_type->parameter_types[i] = parameters[i].type;
-                result_func->param_names[i] = parameters[i].name;
-                result_func->default_values[i] = parameters[i].default_value;
-                if(result_func->default_values[i])
-                {
-                    set_parent_ast(result_func->default_values[i], result_func);
-                }
-            }
-            
-            if(parent.ast)
-            {
-                set_parent_ast(result_func, parent.ast);
-            }
-            set_parent_ast(block, result_func);
-            result = result_func;
-        }
-        else
-        {
-            for(u64 i = 0; i < parameters.count; ++i)
-            {
-                func_type->parameter_types[i] = parameters[i].type;
-            }
-            if(parent.ast)
-            {
-                set_parent_ast(func_type, parent.ast);
-            }
-            result = func_type;
-        }
-    }
-    else if(current->type == Token_Type::number)
-    {
-        Number_AST *result_number = pool_alloc(Number_AST, &ctx->ast_pool, 1);
-        *result_number = make_number_ast(*current);
-        result = result_number;
-        ++current;
-    }
-    else if(current->type == Token_Type::string)
-    {
-        String_AST *result_string = construct_ast(&ctx->ast_pool, String_AST, current->line_number, current->line_offset);
-        result_string->literal = current->contents;
-        result = result_string;
-        ++current;
-    }
-    else if(current->type == Token_Type::key_void)
-    {
-        Primitive_AST *prim_ast = construct_ast(&ctx->ast_pool, Primitive_AST, current->line_number, current->line_offset);
-        prim_ast->primitive = Primitive_Type::void_t;
+            result = unary_ast;
+        } break;
         
-        ++current;
-        result = prim_ast;
-    }
-    else if(current->type == Token_Type::key_true)
-    {
-        Bool_AST *bool_ast = construct_ast(&ctx->ast_pool, Bool_AST, current->line_number, current->line_offset);
-        bool_ast->value = true;
-        ++current;
-        result = bool_ast;
-    }
-    else if(current->type == Token_Type::key_false)
-    {
-        Bool_AST *bool_ast = construct_ast(&ctx->ast_pool, Bool_AST, current->line_number, current->line_offset);
-        bool_ast->value = false;
-        ++current;
-        result = bool_ast;
-    }
-    else if(current->type == Token_Type::add ||
-            current->type == Token_Type::sub ||
-            current->type == Token_Type::mul ||
-            current->type == Token_Type::ref ||
-            current->type == Token_Type::lnot)
-    {
-        u32 line_number = current->line_number;
-        u32 line_offset = current->line_offset;
-        Unary_Operator op;
-        switch(current->type)
-        {
-            case Token_Type::add: {
-                op = Unary_Operator::plus;
-            } break;
-            case Token_Type::sub: {
-                op = Unary_Operator::minus;
-            } break;
-            case Token_Type::mul: {
-                op = Unary_Operator::deref;
-            } break;
-            case Token_Type::ref: {
-                op = Unary_Operator::ref;
-            } break;
-            case Token_Type::lnot: {
-                op = Unary_Operator::lnot;
-            } break;
-            default: {
-                assert(false);
-            } break;
-        }
-        
-        ++current;
-        AST *operand = parse_expr(ctx, &current, parent, precedence);
-        if(!operand)
-        {
-            return nullptr;
-        }
-        
-        Unary_Operator_AST *unary_ast = construct_ast(&ctx->ast_pool, Unary_Operator_AST, line_number, line_offset);
-        unary_ast->op = op;
-        unary_ast->operand = operand;
-        
-        result = unary_ast;
+        default: {} break;
     }
     
     if(!result)

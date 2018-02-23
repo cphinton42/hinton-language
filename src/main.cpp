@@ -231,6 +231,69 @@ void link_all(Array<Decl_AST*> globals)
     }
 }
 
+AST *infer_and_match_types(AST *match_type, AST *ast)
+{
+}
+
+void typecheck_ast(AST *ast)
+{
+    switch(ast->type)
+    {
+        case AST_Type::decl_ast: {
+            
+        } break;
+        case AST_Type::block_ast: {
+            
+        } break;
+        case AST_Type::function_type_ast: {
+            
+        } break;
+        case AST_Type::function_ast: {
+            
+        } break;
+        case AST_Type::function_call_ast: {
+            
+        } break;
+        case AST_Type::binary_operator_ast: {
+        } break;
+        case AST_Type::number_ast: {
+        } break;
+        case AST_Type::while_ast: {
+        } break;
+        case AST_Type::for_ast: {
+        } break;
+        case AST_Type::if_ast: {
+        } break;
+        case AST_Type::enum_ast: {
+        } break;
+        case AST_Type::struct_ast: {
+        } break;
+        case AST_Type::assign_ast: {
+        } break;
+        case AST_Type::unary_ast: {
+            
+        } break;
+        
+        case AST_Type::return_ast: {
+            // TODO
+        } break;
+        
+        case AST_Type::primitive_ast:
+        case AST_Type::ident_ast:
+        case AST_Type::string_ast:
+        case AST_Type::bool_ast: {
+        } break;
+    }
+}
+
+void typecheck_all(Array<Decl_AST*> decls)
+{
+    for(u64 i = 0; i < decls.count; ++i)
+    {
+        typecheck_ast(decls[i]);
+    }
+}
+
 int main(int argc, char **argv)
 {
     // Note: if this becomes multi-threaded, we can get rid of the globals (writes smaller than 4K are supposed to be atomic IIRC)

@@ -8,10 +8,6 @@
 //	*/
 */
 
-// Avoid undeclared identifier for now
-u32 :: void;
-s32 :: void;
-
 derp :: 15;
 
 ident : u32 = ((derp) + 10);
@@ -27,19 +23,18 @@ bar :: 42;
 
 func : F = (param1 : T1, param2 : T2) -> ret_type {};
 
-id3 : u32 = ident*10+5;
+id3 : int = ident*10+5;
 
 id4 : u32 = 10 + 10 + 10 + 10 * 3 / 4;
 
-id5 : u32 = func(bar)[10 + 10].member + 10;
+id5 : uint = func(bar)[10 + 10].member + 10;
 
 
 
 func2 :: () -> u32 {};
 
-u8 :: void;
 default_val :: 5;
-ok := 33;
+ok := 33.5;
 
 func3 :: () -> u32 {
     while true {
@@ -50,7 +45,7 @@ func3 :: () -> u32 {
 
 	test_precedence(10, 10)(ident)();
 
-	var := 10;
+	var := 10.23e+3;
 	const :: 42;
 	other : u32 = 0;
 
@@ -120,4 +115,4 @@ get_last :: (head : &Link) -> u32 {
 
 Context :: struct {};
 
-callback_type :: (ctx : &Context, param : s32, param : s32) -> void;
+callback_type :: (ctx : &Context, param1 : s32, param2 : s32) -> void;
