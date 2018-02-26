@@ -1,6 +1,128 @@
 
 u32 next_serial = 0;
 
+Primitive_AST u8_t_ast;
+Primitive_AST u16_t_ast;
+Primitive_AST u32_t_ast;
+Primitive_AST u64_t_ast;
+Primitive_AST s8_t_ast;
+Primitive_AST s16_t_ast;
+Primitive_AST s32_t_ast;
+Primitive_AST s64_t_ast;
+Primitive_AST bool8_t_ast;
+Primitive_AST bool16_t_ast;
+Primitive_AST bool32_t_ast;
+Primitive_AST bool64_t_ast;
+Primitive_AST f32_t_ast;
+Primitive_AST f64_t_ast;
+Primitive_AST void_t_ast;
+Primitive_AST type_t_ast;
+
+void init_primitive_types()
+{
+    zero_memory(&u8_t_ast, 1);
+    zero_memory(&u16_t_ast, 1);
+    zero_memory(&u32_t_ast, 1);
+    zero_memory(&u64_t_ast, 1);
+    zero_memory(&s8_t_ast, 1);
+    zero_memory(&s16_t_ast, 1);
+    zero_memory(&s32_t_ast, 1);
+    zero_memory(&s64_t_ast, 1);
+    zero_memory(&bool8_t_ast, 1);
+    zero_memory(&bool16_t_ast, 1);
+    zero_memory(&bool32_t_ast, 1);
+    zero_memory(&bool64_t_ast, 1);
+    zero_memory(&f32_t_ast, 1);
+    zero_memory(&f64_t_ast, 1);
+    zero_memory(&void_t_ast, 1);
+    zero_memory(&type_t_ast, 1);
+    
+    u8_t_ast.type = AST_Type::primitive_ast;
+    u16_t_ast.type = AST_Type::primitive_ast;
+    u32_t_ast.type = AST_Type::primitive_ast;
+    u64_t_ast.type = AST_Type::primitive_ast;
+    s8_t_ast.type = AST_Type::primitive_ast;
+    s16_t_ast.type = AST_Type::primitive_ast;
+    s32_t_ast.type = AST_Type::primitive_ast;
+    s64_t_ast.type = AST_Type::primitive_ast;
+    bool8_t_ast.type = AST_Type::primitive_ast;
+    bool16_t_ast.type = AST_Type::primitive_ast;
+    bool32_t_ast.type = AST_Type::primitive_ast;
+    bool64_t_ast.type = AST_Type::primitive_ast;
+    f32_t_ast.type = AST_Type::primitive_ast;
+    f64_t_ast.type = AST_Type::primitive_ast;
+    void_t_ast.type = AST_Type::primitive_ast;
+    type_t_ast.type = AST_Type::primitive_ast;
+    
+    u8_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    u16_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    u32_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    u64_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    s8_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    s16_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    s32_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    s64_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    bool8_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    bool16_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    bool32_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    bool64_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    f32_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    f64_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    void_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    type_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    
+    u8_t_ast.s = next_serial++;
+    u16_t_ast.s = next_serial++;
+    u32_t_ast.s = next_serial++;
+    u64_t_ast.s = next_serial++;
+    s8_t_ast.s = next_serial++;
+    s16_t_ast.s = next_serial++;
+    s32_t_ast.s = next_serial++;
+    s64_t_ast.s = next_serial++;
+    bool8_t_ast.s = next_serial++;
+    bool16_t_ast.s = next_serial++;
+    bool32_t_ast.s = next_serial++;
+    bool64_t_ast.s = next_serial++;
+    f32_t_ast.s = next_serial++;
+    f64_t_ast.s = next_serial++;
+    void_t_ast.s = next_serial++;
+    type_t_ast.s = next_serial++;
+    
+    u8_t_ast.resolved_type = &type_t_ast;
+    u16_t_ast.resolved_type = &type_t_ast;
+    u32_t_ast.resolved_type = &type_t_ast;
+    u64_t_ast.resolved_type = &type_t_ast;
+    s8_t_ast.resolved_type = &type_t_ast;
+    s16_t_ast.resolved_type = &type_t_ast;
+    s32_t_ast.resolved_type = &type_t_ast;
+    s64_t_ast.resolved_type = &type_t_ast;
+    bool8_t_ast.resolved_type = &type_t_ast;
+    bool16_t_ast.resolved_type = &type_t_ast;
+    bool32_t_ast.resolved_type = &type_t_ast;
+    bool64_t_ast.resolved_type = &type_t_ast;
+    f32_t_ast.resolved_type = &type_t_ast;
+    f64_t_ast.resolved_type = &type_t_ast;
+    void_t_ast.resolved_type = &type_t_ast;
+    type_t_ast.resolved_type = &type_t_ast;
+    
+    u8_t_ast.primitive = Primitive_Type::u8_t;
+    u16_t_ast.primitive = Primitive_Type::u16_t;
+    u32_t_ast.primitive = Primitive_Type::u32_t;
+    u64_t_ast.primitive = Primitive_Type::u64_t;
+    s8_t_ast.primitive = Primitive_Type::s8_t;
+    s16_t_ast.primitive = Primitive_Type::s16_t;
+    s32_t_ast.primitive = Primitive_Type::s32_t;
+    s64_t_ast.primitive = Primitive_Type::s64_t;
+    bool8_t_ast.primitive = Primitive_Type::bool8_t;
+    bool16_t_ast.primitive = Primitive_Type::bool16_t;
+    bool32_t_ast.primitive = Primitive_Type::bool32_t;
+    bool64_t_ast.primitive = Primitive_Type::bool64_t;
+    f32_t_ast.primitive = Primitive_Type::f32_t;
+    f64_t_ast.primitive = Primitive_Type::f64_t;
+    void_t_ast.primitive = Primitive_Type::void_t;
+    type_t_ast.primitive = Primitive_Type::type_t;
+}
+
 void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size)
 {
     ctx->program_text = program_text;
@@ -969,96 +1091,82 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             ++current;
         } break;
         
-        {
-            Primitive_Type prim_type;
-            
-            case Token_Type::key_bool: {
-                prim_type = Primitive_Type::bool_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_bool8: {
-                prim_type = Primitive_Type::bool8_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_bool16: {
-                prim_type = Primitive_Type::bool16_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_bool32: {
-                prim_type = Primitive_Type::bool32_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_bool64: {
-                prim_type = Primitive_Type::bool64_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_s8: {
-                prim_type = Primitive_Type::s8_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_s16: {
-                prim_type = Primitive_Type::s16_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_s32: {
-                prim_type = Primitive_Type::s32_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_s64: {
-                prim_type = Primitive_Type::s64_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_type: {
-                prim_type = Primitive_Type::type_t;
-                goto make_primitive_type_ast;
-            }
-            case Token_Type::key_int: {
-                prim_type = Primitive_Type::int_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_u8: {
-                prim_type = Primitive_Type::u8_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_u16: {
-                prim_type = Primitive_Type::u16_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_u32: {
-                prim_type = Primitive_Type::u32_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_u64: {
-                prim_type = Primitive_Type::u64_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_uint: {
-                prim_type = Primitive_Type::uint_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_f32: {
-                prim_type = Primitive_Type::f32_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_f64: {
-                prim_type = Primitive_Type::f64_t;
-                goto make_primitive_type_ast;
-            } break;
-            case Token_Type::key_void: {
-                prim_type = Primitive_Type::void_t;
-                goto make_primitive_type_ast;
-            } break;
-            
-            // TODO: these can be 'interned'
-            
-            make_primitive_type_ast:
-            
-            Primitive_AST *prim_ast = construct_ast(&ctx->ast_pool, Primitive_AST, current->line_number, current->line_offset);
-            prim_ast->resolved_type = nullptr;
-            prim_ast->primitive = prim_type;
-            
+        
+        case Token_Type::key_bool: {
             ++current;
-            result = prim_ast;
+            return &bool8_t_ast;
+        } break;
+        case Token_Type::key_bool8: {
+            ++current;
+            return &bool8_t_ast;
+        } break;
+        case Token_Type::key_bool16: {
+            ++current;
+            return &bool16_t_ast;
+        } break;
+        case Token_Type::key_bool32: {
+            ++current;
+            return &bool32_t_ast;
+        } break;
+        case Token_Type::key_bool64: {
+            ++current;
+            return &bool64_t_ast;
+        } break;
+        case Token_Type::key_s8: {
+            ++current;
+            return &s8_t_ast;
+        } break;
+        case Token_Type::key_s16: {
+            ++current;
+            return &s16_t_ast;
+        } break;
+        case Token_Type::key_s32: {
+            ++current;
+            return &s32_t_ast;
+        } break;
+        case Token_Type::key_s64: {
+            ++current;
+            return &s64_t_ast;
+        } break;
+        case Token_Type::key_type: {
+            ++current;
+            return &type_t_ast;
+        } break;
+        case Token_Type::key_int: {
+            ++current;
+            return &s64_t_ast;
+        } break;
+        case Token_Type::key_u8: {
+            ++current;
+            return &u8_t_ast;
+        } break;
+        case Token_Type::key_u16: {
+            ++current;
+            return &u16_t_ast;
+        } break;
+        case Token_Type::key_u32: {
+            ++current;
+            return &u32_t_ast;
+        } break;
+        case Token_Type::key_u64: {
+            ++current;
+            return &u64_t_ast;
+        } break;
+        case Token_Type::key_uint: {
+            ++current;
+            return &u64_t_ast;
+        } break;
+        case Token_Type::key_f32: {
+            ++current;
+            return &f32_t_ast;
+        } break;
+        case Token_Type::key_f64: {
+            ++current;
+            return &f64_t_ast;
+        } break;
+        case Token_Type::key_void: {
+            ++current;
+            return &void_t_ast;
         } break;
         
         {

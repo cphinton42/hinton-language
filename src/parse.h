@@ -64,7 +64,7 @@ struct Parent_Scope
 
 struct Expr_AST : AST
 {
-    AST *resolved_type;
+    Expr_AST *resolved_type;
 };
 
 enum class Primitive_Type : u64
@@ -134,6 +134,25 @@ struct Primitive_AST : Expr_AST
     
     Primitive_Type primitive;
 };
+
+
+extern Primitive_AST u8_t_ast;
+extern Primitive_AST u16_t_ast;
+extern Primitive_AST u32_t_ast;
+extern Primitive_AST u64_t_ast;
+extern Primitive_AST s8_t_ast;
+extern Primitive_AST s16_t_ast;
+extern Primitive_AST s32_t_ast;
+extern Primitive_AST s64_t_ast;
+extern Primitive_AST bool8_t_ast;
+extern Primitive_AST bool16_t_ast;
+extern Primitive_AST bool32_t_ast;
+extern Primitive_AST bool64_t_ast;
+extern Primitive_AST f32_t_ast;
+extern Primitive_AST f64_t_ast;
+extern Primitive_AST void_t_ast;
+extern Primitive_AST type_t_ast;
+
 
 struct Ident_AST : Expr_AST
 {
@@ -371,6 +390,7 @@ struct Return_AST : AST
     Expr_AST *expr;
 };
 
+void init_primitive_types();
 void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size);
 
 Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx);
