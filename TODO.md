@@ -43,3 +43,6 @@
  - Stack inspection
  - Stack-like context instead of thread-locals
    (using a dedicated register/additional function parameter)
+ - Allocator concept - anything implementing an allocator has aliasing rules
+   - built-in stack allocator that uses stack pointer (to replace alloca)
+ - Manual aliasing annotations

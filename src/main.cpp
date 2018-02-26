@@ -77,7 +77,7 @@ AST *find_ident(Array<Decl_AST*> globals, String ident, Parent_Scope scope)
     }
 }
 
-void link_ast(Array<Decl_AST*> globals, AST *current)
+void link_ast(Array<Decl_AST*> globals, Function_AST *current_function, AST *current)
 {
     
     switch(current->type)
@@ -95,18 +95,18 @@ void link_ast(Array<Decl_AST*> globals, AST *current)
             Decl_AST *decl_ast = static_cast<Decl_AST*>(current);
             if(decl_ast->decl_type)
             {
-                link_ast(globals, decl_ast->decl_type);
+                link_ast(globals, current_function, decl_ast->decl_type);
             }
             if(decl_ast->expr)
             {
-                link_ast(globals, decl_ast->expr);
+                link_ast(globals, current_function, decl_ast->expr);
             }
         } break;
         case AST_Type::block_ast: {
             Block_AST *block_ast = static_cast<Block_AST*>(current);
             for(u64 i = 0; i < block_ast->statements.count; ++i)
             {
-                link_ast(globals, block_ast->statements[i]);
+                link_ast(globals, current_function, block_ast->statements[i]);
             }
         } break;
         case AST_Type::function_type_ast: {
@@ -115,102 +115,103 @@ void link_ast(Array<Decl_AST*> globals, AST *current)
             {
                 if(function_type_ast->parameter_types[i])
                 {
-                    link_ast(globals, function_type_ast->parameter_types[i]);
+                    link_ast(globals, current_function, function_type_ast->parameter_types[i]);
                 }
             }
             for(u64 i = 0; i < function_type_ast->return_types.count; ++i)
             {
                 if(function_type_ast->return_types[i])
                 {
-                    link_ast(globals, function_type_ast->return_types[i]);
+                    link_ast(globals, current_function, function_type_ast->return_types[i]);
                 }
             }
         } break;
         case AST_Type::function_ast: {
             Function_AST *function_ast = static_cast<Function_AST*>(current);
-            link_ast(globals, function_ast->prototype);
+            link_ast(globals, function_ast, function_ast->prototype);
             for(u64 i = 0; i < function_ast->default_values.count; ++i)
             {
                 if(function_ast->default_values[i])
                 {
-                    link_ast(globals, function_ast->default_values[i]);
+                    link_ast(globals, function_ast, function_ast->default_values[i]);
                 }
             }
-            link_ast(globals, function_ast->block);
+            link_ast(globals, function_ast, function_ast->block);
         } break;
         case AST_Type::function_call_ast: {
             Function_Call_AST *function_call_ast = static_cast<Function_Call_AST*>(current);
             for(u64 i = 0; i < function_call_ast->args.count; ++i)
             {
-                link_ast(globals, function_call_ast->args[i]);
+                link_ast(globals, current_function, function_call_ast->args[i]);
             }
-            link_ast(globals, function_call_ast->function);
+            link_ast(globals, current_function, function_call_ast->function);
         } break;
         case AST_Type::binary_operator_ast: {
             Binary_Operator_AST *binary_operator_ast = static_cast<Binary_Operator_AST*>(current);
-            link_ast(globals, binary_operator_ast->lhs);
+            link_ast(globals, current_function, binary_operator_ast->lhs);
             if(binary_operator_ast->op != Binary_Operator::access)
             {
-                link_ast(globals, binary_operator_ast->rhs);
+                link_ast(globals, current_function, binary_operator_ast->rhs);
             }
         } break;
         case AST_Type::while_ast: {
             While_AST *while_ast = static_cast<While_AST*>(current);
-            link_ast(globals, while_ast->guard);
-            link_ast(globals, while_ast->body);
+            link_ast(globals, current_function, while_ast->guard);
+            link_ast(globals, current_function, while_ast->body);
         } break;
         case AST_Type::for_ast: {
             For_AST *for_ast = static_cast<For_AST*>(current);
             if(for_ast->flags & FOR_FLAG_OVER_ARRAY)
             {
-                link_ast(globals, for_ast->array_expr);
+                link_ast(globals, current_function, for_ast->array_expr);
             }
             else
             {
-                link_ast(globals, for_ast->low_expr);
-                link_ast(globals, for_ast->high_expr);
+                link_ast(globals, current_function, for_ast->low_expr);
+                link_ast(globals, current_function, for_ast->high_expr);
             }
-            link_ast(globals, for_ast->body);
+            link_ast(globals, current_function, for_ast->body);
         } break;
         case AST_Type::if_ast: {
             If_AST *if_ast = static_cast<If_AST*>(current);
-            link_ast(globals, if_ast->guard);
-            link_ast(globals, if_ast->then_block);
+            link_ast(globals, current_function, if_ast->guard);
+            link_ast(globals, current_function, if_ast->then_block);
             if(if_ast->else_block)
             {
-                link_ast(globals, if_ast->else_block);
+                link_ast(globals, current_function, if_ast->else_block);
             }
         } break;
         case AST_Type::enum_ast: {
             Enum_AST *enum_ast = static_cast<Enum_AST*>(current);
             for(u64 i = 0; i < enum_ast->values.count; ++i)
             {
-                link_ast(globals, enum_ast->values[i]);
+                link_ast(globals, current_function, enum_ast->values[i]);
             }
         } break;
         case AST_Type::struct_ast: {
             Struct_AST *struct_ast = static_cast<Struct_AST*>(current);
             for(u64 i = 0; i < struct_ast->constants.count; ++i)
             {
-                link_ast(globals, struct_ast->constants[i]);
+                link_ast(globals, current_function, struct_ast->constants[i]);
             }
             for(u64 i = 0; i < struct_ast->fields.count; ++i)
             {
-                link_ast(globals, struct_ast->fields[i]);
+                link_ast(globals, current_function, struct_ast->fields[i]);
             }
         } break;
         case AST_Type::assign_ast: {
             Assign_AST *assign_ast = static_cast<Assign_AST*>(current);
-            link_ast(globals, &assign_ast->ident);
-            link_ast(globals, assign_ast->rhs);
+            link_ast(globals, current_function, &assign_ast->ident);
+            link_ast(globals, current_function, assign_ast->rhs);
         } break;
         case AST_Type::unary_ast: {
             Unary_Operator_AST *unary_operator_ast = static_cast<Unary_Operator_AST*>(current);
-            link_ast(globals, unary_operator_ast->operand);
+            link_ast(globals, current_function, unary_operator_ast->operand);
         } break;
         case AST_Type::return_ast: {
             Return_AST *return_ast = static_cast<Return_AST*>(current);
-            link_ast(globals, return_ast->expr);
+            return_ast->function = current_function;
+            link_ast(globals, current_function, return_ast->expr);
         } break;
         case AST_Type::number_ast: 
         case AST_Type::primitive_ast:
@@ -227,12 +228,24 @@ void link_all(Array<Decl_AST*> globals)
 {
     for(u64 i = 0; i < globals.count; ++i)
     {
-        link_ast(globals, globals[i]);
+        link_ast(globals, nullptr, globals[i]);
     }
+}
+
+
+bool match_type(AST *t1, AST *t2)
+{
+    return false;
+}
+
+AST *resolve_to_type(AST *expr)
+{
+    return nullptr;
 }
 
 AST *infer_and_match_types(AST *match_type, AST *ast)
 {
+    return nullptr;
 }
 
 void typecheck_ast(AST *ast)
@@ -240,13 +253,24 @@ void typecheck_ast(AST *ast)
     switch(ast->type)
     {
         case AST_Type::decl_ast: {
+            Decl_AST *decl_ast = static_cast<Decl_AST*>(ast);
+            
+            AST *type_to_match = nullptr;
+            if(decl_ast->decl_type)
+            {
+                type_to_match = resolve_to_type(decl_ast->decl_type);
+            }
+            
+            // TODO
+            
+            
             
         } break;
         case AST_Type::block_ast: {
-            
+            Block_AST *block_ast = static_cast<Block_AST*>(ast);
         } break;
         case AST_Type::function_type_ast: {
-            
+            Function_Type_AST *function_type_ast = static_cast<Function_Type_AST*>(ast);
         } break;
         case AST_Type::function_ast: {
             

@@ -26,6 +26,7 @@ enum class Token_Type : u64
     key_string,
     key_struct,
     key_true,
+    key_type,
     key_u8,
     key_u16,
     key_u32,
@@ -96,6 +97,7 @@ X("s64") \
 X("string") \
 X("struct") \
 X("true") \
+X("type") \
 X("u8") \
 X("u16") \
 X("u32") \
