@@ -82,8 +82,8 @@ void link_ast(Array<Decl_AST*> globals, Function_AST *current_function, AST *cur
     
     switch(current->type)
     {
-        case AST_Type::ident_ast: {
-            Ident_AST *ident_ast = static_cast<Ident_AST*>(current);
+        case AST_Type::refer_ident_ast: {
+            Refer_Ident_AST *ident_ast = static_cast<Refer_Ident_AST*>(current);
             ident_ast->referred_to = find_ident(globals, ident_ast->ident, ident_ast->parent);
             if(!ident_ast->referred_to)
             {
@@ -213,6 +213,7 @@ void link_ast(Array<Decl_AST*> globals, Function_AST *current_function, AST *cur
             return_ast->function = current_function;
             link_ast(globals, current_function, return_ast->expr);
         } break;
+        case AST_Type::def_ident_ast:
         case AST_Type::number_ast: 
         case AST_Type::primitive_ast:
         case AST_Type::string_ast:
@@ -232,7 +233,7 @@ void link_all(Array<Decl_AST*> globals)
     }
 }
 
-
+/*
 bool match_type(AST *t1, AST *t2)
 {
     return false;
@@ -248,7 +249,7 @@ AST *infer_and_match_types(AST *match_type, AST *ast)
     return nullptr;
 }
 
-void typecheck_ast(AST *ast)
+void typecheck_ast(AST *ast, Dynamic_Array<AST> *to_check)
 {
     switch(ast->type)
     {
@@ -268,21 +269,50 @@ void typecheck_ast(AST *ast)
         } break;
         case AST_Type::block_ast: {
             Block_AST *block_ast = static_cast<Block_AST*>(ast);
+            for(u64 i = 0; i < block_ast->statements.count; ++i)
+            {
+                typecheck_ast(block_ast->statements[i]);
+            }
         } break;
         case AST_Type::function_type_ast: {
             Function_Type_AST *function_type_ast = static_cast<Function_Type_AST*>(ast);
+            for(u64 i = 0; i < function_type_ast->parameter_types.count; ++i)
+            {
+                infer_and_match_types(&type_t_ast, function_type_ast->parameter_types[i]);
+            }
+            for(u64 i = 0; i < function_type_ast->return_types.count; ++i)
+            {
+                infer_and_match_types(&type_t_ast, function_type_ast->return_types[i]);
+            }
         } break;
         case AST_Type::function_ast: {
-            
+            Function_AST *function_ast = static_cast<Function_AST*>(ast);
+            typecheck_ast(function_ast->prototype);
+            for(u64 i = 0; i < function_ast->param_names.count; ++i)
+            {
+                Expr_AST *type = function_ast->prototype->parameter_types[i]->resolved_type;
+                function_ast->param_names[i]->resolved_type = type;
+                if(function_ast->default_values[i])
+                {
+                    infer_and_match_types(type, function_ast->default_values[i]);
+                }
+            }
+            typecheck_ast(function_ast->block);
         } break;
         case AST_Type::function_call_ast: {
-            
+            // TODO
         } break;
         case AST_Type::binary_operator_ast: {
+            Binary_Operator_AST *binary_operator_ast = static_cast<Binary_Operator_AST*>(ast);
+            typecheck_ast(binary_operator_ast->lhs);
+            typecheck_ast(binary_operator_ast->rhs);
+            // TODO: check if types can be added
         } break;
         case AST_Type::number_ast: {
+            // TODO:
         } break;
         case AST_Type::while_ast: {
+        
         } break;
         case AST_Type::for_ast: {
         } break;
@@ -295,7 +325,7 @@ void typecheck_ast(AST *ast)
         case AST_Type::assign_ast: {
         } break;
         case AST_Type::unary_ast: {
-            
+        
         } break;
         
         case AST_Type::return_ast: {
@@ -310,13 +340,57 @@ void typecheck_ast(AST *ast)
     }
 }
 
-void typecheck_all(Array<Decl_AST*> decls)
+bool typecheck_all(Array<Decl_AST*> decls)
 {
+    Dynamic_Array<AST*> arrays[2];
+    
     for(u64 i = 0; i < decls.count; ++i)
     {
-        typecheck_ast(decls[i]);
+        typecheck_ast(decls[i], &arrays[0]);
+    }
+    
+    Dynamic_Array<AST*> *checking = &arrays[0];
+    Dynamic_Array<AST*> *to_check = &arrays[1];
+    
+    // Keep checking while progress is made
+    while(true)
+    {
+        // Clear to_check
+        to_check->count = 0;
+        
+        // Check all in checking
+        for(u64 i = 0; i < checking->count; ++i)
+        {
+            typecheck_ast(*checking[i], to_check);
+        }
+        
+        // Note: this equality check requires that elements are added to to_check in the same order they are visited in.
+        // This is *currently* the case if we are at a typechecking dead-end
+        // Of course, the condition is also fulfilled if both are empty
+        if(*checking == *to_check)
+        {
+            break;
+        }
+        
+        // Swap arrays
+        Dynamic_Array<AST*> *tmp = checking;
+        checking = to_check;
+        to_check = tmp;
+    }
+    
+    if(count != 0)
+    {
+        // TODO: search for the problem
+        print_err("Unable to finish typechecking the following:\n");
+        print_dot(&stderr_buf, to_check->array);
+        return false;
+    }
+    else
+    {
+        return true;
     }
 }
+*/
 
 int main(int argc, char **argv)
 {

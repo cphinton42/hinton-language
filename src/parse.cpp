@@ -211,10 +211,22 @@ void report_error(Parsing_Context *ctx, Token *start_section, Token *current,con
     }
 }
 
-internal Ident_AST make_ident_ast(Token ident)
+internal Def_Ident_AST make_def_ident_ast(Token ident)
 {
-    Ident_AST result;
-    result.type = AST_Type::ident_ast;
+    Def_Ident_AST result;
+    result.type = AST_Type::def_ident_ast;
+    result.flags = 0;
+    result.s = next_serial++;
+    result.line_number = ident.line_number;
+    result.line_offset = ident.line_offset;
+    result.ident = ident.contents;
+    return result;
+}
+
+internal Refer_Ident_AST make_refer_ident_ast(Token ident)
+{
+    Refer_Ident_AST result;
+    result.type = AST_Type::refer_ident_ast;
     result.flags = 0;
     result.s = next_serial++;
     result.line_number = ident.line_number;
@@ -333,8 +345,8 @@ internal void set_parent_ast(AST *root, AST *parent_ast)
 {
     switch(root->type)
     {
-        case AST_Type::ident_ast: {
-            Ident_AST *ident_ast = static_cast<Ident_AST*>(root);
+        case AST_Type::refer_ident_ast: {
+            Refer_Ident_AST *ident_ast = static_cast<Refer_Ident_AST*>(root);
             ident_ast->parent.ast = parent_ast;
         } break;
         case AST_Type::decl_ast: {
@@ -435,6 +447,7 @@ internal void set_parent_ast(AST *root, AST *parent_ast)
             Return_AST *return_ast = static_cast<Return_AST*>(root);
             set_parent_ast(return_ast->expr, parent_ast);
         } break;
+        case AST_Type::def_ident_ast:
         case AST_Type::number_ast:
         case AST_Type::primitive_ast:
         case AST_Type::string_ast:
@@ -625,9 +638,10 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                 ++current;
                 if(current->type == Token_Type::ident)
                 {
-                    Ident_AST *rhs = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
-                    *rhs = make_ident_ast(*current);
-                    // Note: not sure if this one strictly needs the parent set, it can hardly hurt
+                    // Note: this doesn't exactly fit into the same category as other identifiers. The namespace that it looks into depends on the lhs
+                    Refer_Ident_AST *rhs = pool_alloc(Refer_Ident_AST, &ctx->ast_pool, 1);
+                    *rhs = make_refer_ident_ast(*current);
+                    // Note: probably doesn't need the parent set, it can hardly hurt for now
                     rhs->parent = parent; 
                     ++current;
                     
@@ -696,8 +710,8 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
     switch(current->type)
     {
         case Token_Type::ident: {
-            Ident_AST *result_ident = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
-            *result_ident = make_ident_ast(*current);
+            Refer_Ident_AST *result_ident = pool_alloc(Refer_Ident_AST, &ctx->ast_pool, 1);
+            *result_ident = make_refer_ident_ast(*current);
             result_ident->parent = parent;
             result = result_ident;
             ++current;
@@ -821,7 +835,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             Dynamic_Array<Parameter_AST> parameters = {0};
             
             bool expect_more = (current->type != Token_Type::eof && current->type != Token_Type::close_paren);
-            bool must_be_func = false;
+            bool must_be_func = current->type == Token_Type::close_paren;
             bool must_have_body = false;
             
             Parent_Scope blank_parent;
@@ -830,68 +844,53 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             
             while(expect_more)
             {
-                Ident_AST *ident = nullptr;
+                Def_Ident_AST *ident = nullptr;
                 Expr_AST *type = nullptr;
                 Expr_AST *default_value = nullptr;
                 
-                Expr_AST *expr = parse_expr(ctx, &current, blank_parent);
-                if(!expr)
-                {
-                    return nullptr;
-                }
-                // expr could be parameter name, parameter type, or maybe an expr, depending on must_be_func
+                Token *previous = current;
+                bool expect_default = false;
                 
-                if(expr->type == AST_Type::ident_ast)
+                if(current->type == Token_Type::ident)
                 {
-                    // If there is a ':' or ':=' the identifier must be a parameter name
-                    // Otherwise, it could be a Type, or just a parenthesized expression
+                    ++current;
+                    bool got_param_name;
                     
-                    bool expect_default = false;
                     if(current->type == Token_Type::colon)
                     {
-                        ++current;
+                        got_param_name = true;
+                        expect_default = false;
                         must_be_func = true;
-                        
-                        ident = static_cast<Ident_AST*>(expr);
-                        type = parse_expr(ctx, &current, blank_parent);
-                        
-                        if(!type)
-                        {
-                            return nullptr;
-                        }
-                        if(current->type == Token_Type::equal)
-                        {
-                            ++current;
-                            expect_default = true;
-                        }
+                        ++current;
                     }
                     else if(current->type == Token_Type::colon_eq)
                     {
-                        ++current;
-                        must_be_func = true;
-                        
-                        ident = static_cast<Ident_AST*>(expr);
-                        // type needs to be inferred
+                        got_param_name = true;
                         expect_default = true;
+                        must_be_func = true;
+                        must_have_body = true;
+                        ++current;
                     }
                     else
                     {
-                        type = expr;
+                        got_param_name = false;
+                        current = previous;
                     }
                     
-                    if(expect_default)
+                    if(got_param_name)
                     {
-                        must_have_body = true;
-                        default_value = parse_expr(ctx, &current, blank_parent);
-                        if(!default_value)
-                        {
-                            return nullptr;
-                        }
+                        ident = pool_alloc(Def_Ident_AST, &ctx->ast_pool, 1);
+                        *ident = make_def_ident_ast(*previous);
                     }
+                }
+                
+                Expr_AST *expr = parse_expr(ctx, &current, blank_parent);
+                if(expect_default)
+                {
+                    default_value = expr;
                 }
                 else
                 {
-                    // Expr is not a parameter name, it could be unnamed parameter, or just a parethesized expression
                     type = expr;
                 }
                 
@@ -907,6 +906,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 {
                     expect_more = false;
                 }
+                
                 ++blank_parent.index;
             }
             
@@ -991,7 +991,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 result_func->block = block;
                 
                 result_func->param_names.count = parameters.count;
-                result_func->param_names.data = pool_alloc(Ident_AST*, &ctx->ast_pool, parameters.count);
+                result_func->param_names.data = pool_alloc(Def_Ident_AST*, &ctx->ast_pool, parameters.count);
                 result_func->default_values.count = parameters.count;
                 result_func->default_values.data = pool_alloc(Expr_AST*, &ctx->ast_pool, parameters.count);
                 result_func->parent = parent;
@@ -1261,8 +1261,8 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         ++current;
         Token *start = current;
         
-        Ident_AST *induction_var = nullptr;
-        Ident_AST *index_var = nullptr;
+        Def_Ident_AST *induction_var = nullptr;
+        Def_Ident_AST *index_var = nullptr;
         bool by_pointer = false;
         
         if(current->type == Token_Type::ref)
@@ -1301,13 +1301,13 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
                 assert(first_ident);
                 
                 // TODO: move allocation to prevent memory leak
-                induction_var = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
-                *induction_var = make_ident_ast(*first_ident);
+                induction_var = pool_alloc(Def_Ident_AST, &ctx->ast_pool, 1);
+                *induction_var = make_def_ident_ast(*first_ident);
                 
                 if(second_ident)
                 {
-                    index_var = pool_alloc(Ident_AST, &ctx->ast_pool, 1);
-                    *index_var = make_ident_ast(*second_ident);
+                    index_var = pool_alloc(Def_Ident_AST, &ctx->ast_pool, 1);
+                    *index_var = make_def_ident_ast(*second_ident);
                 }
             }
             else if(must_use_names)
@@ -1367,11 +1367,9 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         
         if(!induction_var)
         {
-            induction_var = construct_ast(&ctx->ast_pool, Ident_AST, 0, 0);
-            induction_var->ident = str_lit("it");
-            induction_var->referred_to = nullptr;
-            induction_var->parent = {0};
+            induction_var = construct_ast(&ctx->ast_pool, Def_Ident_AST, 0, 0);
             induction_var->flags |= AST_FLAG_SYNTHETIC;
+            induction_var->ident = str_lit("it");
         }
         
         for_ast->induction_var = induction_var;
@@ -1385,11 +1383,9 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         {
             if(!index_var)
             {
-                index_var = construct_ast(&ctx->ast_pool, Ident_AST, 0, 0);
-                index_var->ident = str_lit("it_index");
-                index_var->referred_to = nullptr;
-                index_var->parent = {0};
+                index_var = construct_ast(&ctx->ast_pool, Def_Ident_AST, 0, 0);
                 index_var->flags |= AST_FLAG_SYNTHETIC;
+                index_var->ident = str_lit("it_index");
             }
             
             for_ast->flags |= FOR_FLAG_OVER_ARRAY;
@@ -1531,7 +1527,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
                 
                 Assign_AST *assign = construct_ast(&ctx->ast_pool, Assign_AST, line_number, line_offset);
                 
-                assign->ident = make_ident_ast(*at_ident);
+                assign->ident = make_refer_ident_ast(*at_ident);
                 assign->ident.parent = parent;
                 assign->assign_type = assign_type;
                 assign->rhs = expr;
@@ -1756,7 +1752,7 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope par
         }
         
         result = construct_ast(&ctx->ast_pool, Decl_AST, line_number, line_offset);
-        result->ident = make_ident_ast(*ident_tok);
+        result->ident = make_def_ident_ast(*ident_tok);
         result->decl_type = type;
         result->expr = expr;
         
@@ -1841,13 +1837,17 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast)
     u32 s = ast->s;
     switch(ast->type)
     {
-        case AST_Type::ident_ast: {
-            Ident_AST *ident_ast = static_cast<Ident_AST*>(ast);
-            print_buf(pb, "n%ld[label=\"%.*s\"];\n", s, (u32)ident_ast->ident.count, ident_ast->ident.data);
+        case AST_Type::refer_ident_ast: {
+            Refer_Ident_AST *ident_ast = static_cast<Refer_Ident_AST*>(ast);
+            print_buf(pb, "n%ld[label=\"%.*s\"];\n", s, ident_ast->ident.count, ident_ast->ident.data);
             if(draw_parents && ident_ast->parent.ast)
             {
                 print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, ident_ast->parent.ast->s);
             }
+        } break;
+        case AST_Type::def_ident_ast: {
+            Def_Ident_AST *ident_ast = static_cast<Def_Ident_AST*>(ast);
+            print_buf(pb, "n%ld[label=\"%.*s\"];\n", s, (u32)ident_ast->ident.count, ident_ast->ident.data);
         } break;
         case AST_Type::decl_ast: {
             Decl_AST *decl_ast = static_cast<Decl_AST*>(ast);

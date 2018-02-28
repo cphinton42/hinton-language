@@ -14,7 +14,8 @@ struct Parsing_Context
 
 enum class AST_Type : u16
 {
-    ident_ast,
+    def_ident_ast,
+    refer_ident_ast,
     decl_ast,
     block_ast,
     function_type_ast,
@@ -154,9 +155,16 @@ extern Primitive_AST void_t_ast;
 extern Primitive_AST type_t_ast;
 
 
-struct Ident_AST : Expr_AST
+struct Def_Ident_AST : AST
 {
-    static constexpr AST_Type type_value = AST_Type::ident_ast;
+    static constexpr AST_Type type_value = AST_Type::def_ident_ast;
+    
+    String ident;
+};
+
+struct Refer_Ident_AST : Expr_AST
+{
+    static constexpr AST_Type type_value = AST_Type::refer_ident_ast;
     
     String ident;
     // Note: referred_to is probably mutually exclusive with parent
@@ -167,7 +175,7 @@ struct Ident_AST : Expr_AST
 // Note: not actually part of the AST structure, just used during parsing
 struct Parameter_AST
 {
-    Ident_AST *name;
+    Def_Ident_AST *name;
     Expr_AST *type;
     Expr_AST *default_value;
 };
@@ -176,7 +184,7 @@ struct Decl_AST : AST
 {
     static constexpr AST_Type type_value = AST_Type::decl_ast;
     
-    Ident_AST ident;
+    Def_Ident_AST ident;
     Expr_AST *decl_type;
     Expr_AST *expr;
     Parent_Scope parent;
@@ -203,7 +211,7 @@ struct Function_AST : Expr_AST
     static constexpr AST_Type type_value = AST_Type::function_ast;
     
     Function_Type_AST *prototype;
-    Array<Ident_AST*> param_names;
+    Array<Def_Ident_AST*> param_names;
     Array<Expr_AST*> default_values;
     Block_AST *block;
     Parent_Scope parent;
@@ -289,12 +297,12 @@ struct For_AST : AST
 {
     static constexpr AST_Type type_value = AST_Type::for_ast;
     
-    Ident_AST *induction_var;
+    Def_Ident_AST *induction_var;
     union
     {
         struct
         {
-            Ident_AST *index_var;
+            Def_Ident_AST *index_var;
             Expr_AST *array_expr;
         };
         struct
@@ -348,11 +356,12 @@ const byte *assign_names[] = {
     "/=",
 };
 
+// TODO: this should actually work for all l-values, not just identifiers
 struct Assign_AST : AST
 {
     static constexpr AST_Type type_value = AST_Type::assign_ast;
     
-    Ident_AST ident;
+    Refer_Ident_AST ident;
     Assign_Operator assign_type;
     Expr_AST *rhs;
 };

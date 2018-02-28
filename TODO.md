@@ -2,6 +2,7 @@
 
 ### Immediate TODO's
 
+ - Assignments need to take l-values, not just identifiers
  - Type checking
  - Code gen
 
