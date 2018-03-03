@@ -308,12 +308,52 @@ Typecheck_Result infer_and_check_type(Pool_Allocator *ast_pool, Expr_AST *type_t
         } break;
         case AST_Type::function_call_ast: {
         } break;
+        
         case AST_Type::binary_operator_ast: {
-        } break;
-        case AST_Type::enum_ast: {
-        } break;
-        case AST_Type::struct_ast: {
+            Binary_Operator_AST *binary_operator_ast = static_cast<Binary_Operator_AST*>(expr);
             
+            switch(binary_operator_ast->op)
+            {
+                case Binary_Operator::access: {
+                    
+                } break;
+                case Binary_Operator::cmp_eq:
+                case Binary_Operator::cmp_neq:
+                case Binary_Operator::cmp_lt:
+                case Binary_Operator::cmp_le:
+                case Binary_Operator::cmp_gt:
+                case Binary_Operator::cmp_ge:{
+                    
+                } break;
+                case Binary_Operator::add:
+                case Binary_Operator::sub:
+                case Binary_Operator::mul:
+                case Binary_Operator::div: {
+                    
+                } break;
+                case Binary_Operator::subscript: {
+                    
+                } break;
+                case Binary_Operator::lor:
+                case Binary_Operator::land: {
+                    
+                } break;
+            }
+        } break;
+        // TODO: may need to differentiate these 3 ?
+        case AST_Type::enum_ast:
+        case AST_Type::struct_ast:
+        case AST_Type::primitive_ast: {
+            expr->resolved_type = &type_t_ast;
+            if(type_to_match)
+            {
+                Typecheck_Result match = types_match(type_to_match, &type_t_ast);
+                return match;
+            }
+            else
+            {
+                return Typecheck_Result::success;
+            }
         } break;
         case AST_Type::unary_ast: {
             Unary_Operator_AST *unary_operator_ast = static_cast<Unary_Operator_AST*>(expr);
@@ -340,9 +380,12 @@ Typecheck_Result infer_and_check_type(Pool_Allocator *ast_pool, Expr_AST *type_t
                         number_type = &numberlike_t_ast;
                     }
                     
-                    
-                    
-                    
+                    Typecheck_Result result = infer_and_check_type(ast_pool, number_type, unary_operator_ast->operand);
+                    if(result == Typecheck_Result::success)
+                    {
+                        expr->resolved_type = unary_operator_ast->operand->resolved_type;
+                    }
+                    return result;
                 } break;
                 case Unary_Operator::deref: {
                     Unary_Operator_AST *type_to_deref = construct_ast(ast_pool, Unary_Operator_AST, 0, 0);
@@ -401,10 +444,6 @@ Typecheck_Result infer_and_check_type(Pool_Allocator *ast_pool, Expr_AST *type_t
                     return result;
                 } break;
             }
-        } break;
-        case AST_Type::primitive_ast: {
-            expr->resolved_type = &type_t_ast;
-            return Typecheck_Result::success;
         } break;
         case AST_Type::string_ast: {
             // TODO:

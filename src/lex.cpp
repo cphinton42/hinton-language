@@ -435,6 +435,48 @@ Dynamic_Array<Token> lex_string(String file_contents)
                     continue;
                 }
             } break;
+            case '!': {
+                start = point;
+                c = *(++point);
+                
+                if(c == '=')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::not_equal, make_array(2, start));
+                }
+                else
+                {
+                    add_token(Token_Type::lnot, make_array(1, start));
+                }
+            } break;
+            case '<': {
+                start = point;
+                c = *(++point);
+                
+                if(c == '=')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::le, make_array(2, start));
+                }
+                else
+                {
+                    add_token(Token_Type::lt, make_array(1, start));
+                }
+            } break;
+            case '>': {
+                start = point;
+                c = *(++point);
+                
+                if(c == '=')
+                {
+                    c = *(++point);
+                    add_token(Token_Type::ge, make_array(2, start));
+                }
+                else
+                {
+                    add_token(Token_Type::gt, make_array(1, start));
+                }
+            } break;
             case ',': {
                 add_token(Token_Type::comma, make_array(1, point));
                 c = *(++point);
@@ -465,10 +507,6 @@ Dynamic_Array<Token> lex_string(String file_contents)
             } break;
             case '}': {
                 add_token(Token_Type::close_brace, make_array(1, point));
-                c = *(++point);
-            } break;
-            case '!': {
-                add_token(Token_Type::lnot, make_array(1, point));
                 c = *(++point);
             } break;
             default: {

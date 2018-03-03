@@ -495,7 +495,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
 internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent);
 internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent, u32 precedence);
 
-internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent, u32 precedence = 5)
+internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent, u32 precedence = 7)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -517,18 +517,62 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
         
         switch(precedence)
         {
-            case 5:
+            case 7:
             if(current->type == Token_Type::lor)
             {
                 op = Binary_Operator::lor;
+                found_op = true;
+                rhs_precedence = 6;
+                break;
+            }
+            case 6:
+            if(current->type == Token_Type::land)
+            {
+                op = Binary_Operator::land;
+                found_op = true;
+                rhs_precedence = 5;
+                break;
+            }
+            case 5:
+            if(current->type == Token_Type::double_equal)
+            {
+                op = Binary_Operator::cmp_eq;
+                found_op = true;
+                rhs_precedence = 4;
+                break;
+            }
+            if(current->type == Token_Type::not_equal)
+            {
+                op = Binary_Operator::cmp_neq;
                 found_op = true;
                 rhs_precedence = 4;
                 break;
             }
             case 4:
-            if(current->type == Token_Type::land)
+            if(current->type == Token_Type::lt)
             {
-                op = Binary_Operator::land;
+                op = Binary_Operator::cmp_lt;
+                found_op = true;
+                rhs_precedence = 3;
+                break;
+            }
+            if(current->type == Token_Type::le)
+            {
+                op = Binary_Operator::cmp_le;
+                found_op = true;
+                rhs_precedence = 3;
+                break;
+            }
+            if(current->type == Token_Type::gt)
+            {
+                op = Binary_Operator::cmp_gt;
+                found_op = true;
+                rhs_precedence = 3;
+                break;
+            }
+            if(current->type == Token_Type::ge)
+            {
+                op = Binary_Operator::cmp_ge;
                 found_op = true;
                 rhs_precedence = 3;
                 break;

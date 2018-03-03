@@ -5,13 +5,18 @@
  - Type checking - the exploration is real
  - Assignments need to take l-values, not just identifiers
  - Structs and enums should not capture variable identifiers from local scope
- - add != operator
  - Deduplicate all types (e.g. check a hash and strict equality)
+   Types probably need to keep line information separate from type information
  - Code gen
 
 ### Notes
- - Probably undo intern of Primitive_Type_AST to get back line information
+ - Probably need to differentiate the concept of typechecking
+   - local matching of types
+   - constraints by directives, constant checking, etc.
+   - transitivity
+ - Probably undo intern of Primitive_AST to get back line information
    Having synthetic versions is be convenient for type inference, do both
+ - Differentiate synthetic flag: polymorphic, inferred, internal
  - Declarations introduce a new scope for recursion's sake.
    Doesn't make much sense when declaring a struct's field or enum value though
    Typechecking might take care of that?

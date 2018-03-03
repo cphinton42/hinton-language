@@ -263,6 +263,12 @@ struct Bool_AST : Expr_AST
 enum class Binary_Operator : u64
 {
     access,
+    cmp_eq,
+    cmp_neq,
+    cmp_lt,
+    cmp_le,
+    cmp_gt,
+    cmp_ge,
     add,
     sub,
     mul,

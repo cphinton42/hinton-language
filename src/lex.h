@@ -57,6 +57,10 @@ enum class Token_Type : u64
     open_brace,
     close_brace,
     
+    lt,
+    le,
+    gt,
+    ge,
     mul,
     add,
     sub,
@@ -65,6 +69,7 @@ enum class Token_Type : u64
     land,
     div,
     lnot,
+    not_equal,
     equal,
     double_equal,
     mul_eq,
@@ -121,6 +126,10 @@ X("[") \
 X("]") \
 X("{") \
 X("}") \
+X("<") \
+X("<=") \
+X(">") \
+X(">=") \
 X("*") \
 X("+") \
 X("-") \
@@ -129,6 +138,7 @@ X("&") \
 X("&&") \
 X("/") \
 X("!") \
+X("!=") \
 X("=") \
 X("==") \
 X("*=") \
