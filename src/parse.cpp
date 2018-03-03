@@ -17,6 +17,10 @@ Primitive_AST f32_t_ast;
 Primitive_AST f64_t_ast;
 Primitive_AST void_t_ast;
 Primitive_AST type_t_ast;
+Primitive_AST intlike_t_ast;
+Primitive_AST floatlike_t_ast;
+Primitive_AST numberlike_t_ast;
+Primitive_AST boollike_t_ast;
 
 void init_primitive_types()
 {
@@ -36,6 +40,10 @@ void init_primitive_types()
     zero_memory(&f64_t_ast, 1);
     zero_memory(&void_t_ast, 1);
     zero_memory(&type_t_ast, 1);
+    zero_memory(&intlike_t_ast, 1);
+    zero_memory(&floatlike_t_ast, 1);
+    zero_memory(&numberlike_t_ast, 1);
+    zero_memory(&boollike_t_ast, 1);
     
     u8_t_ast.type = AST_Type::primitive_ast;
     u16_t_ast.type = AST_Type::primitive_ast;
@@ -53,23 +61,31 @@ void init_primitive_types()
     f64_t_ast.type = AST_Type::primitive_ast;
     void_t_ast.type = AST_Type::primitive_ast;
     type_t_ast.type = AST_Type::primitive_ast;
+    intlike_t_ast.type = AST_Type::primitive_ast;
+    floatlike_t_ast.type = AST_Type::primitive_ast;
+    numberlike_t_ast.type = AST_Type::primitive_ast;
+    boollike_t_ast.type = AST_Type::primitive_ast;
     
-    u8_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    u16_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    u32_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    u64_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    s8_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    s16_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    s32_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    s64_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    bool8_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    bool16_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    bool32_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    bool64_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    f32_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    f64_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    void_t_ast.flags |= AST_FLAG_SYNTHETIC;
-    type_t_ast.flags |= AST_FLAG_SYNTHETIC;
+    u8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    u16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    u32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    u64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    s8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    s16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    s32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    s64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    bool8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    bool16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    bool32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    bool64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    f32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    f64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    void_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    type_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    intlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    floatlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    numberlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    boollike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
     
     u8_t_ast.s = next_serial++;
     u16_t_ast.s = next_serial++;
@@ -87,6 +103,10 @@ void init_primitive_types()
     f64_t_ast.s = next_serial++;
     void_t_ast.s = next_serial++;
     type_t_ast.s = next_serial++;
+    intlike_t_ast.s = next_serial++;
+    floatlike_t_ast.s = next_serial++;
+    numberlike_t_ast.s = next_serial++;
+    boollike_t_ast.s = next_serial++;
     
     u8_t_ast.resolved_type = &type_t_ast;
     u16_t_ast.resolved_type = &type_t_ast;
@@ -104,30 +124,38 @@ void init_primitive_types()
     f64_t_ast.resolved_type = &type_t_ast;
     void_t_ast.resolved_type = &type_t_ast;
     type_t_ast.resolved_type = &type_t_ast;
+    intlike_t_ast.resolved_type = &type_t_ast;
+    floatlike_t_ast.resolved_type = &type_t_ast;
+    numberlike_t_ast.resolved_type = &type_t_ast;
+    boollike_t_ast.resolved_type = &type_t_ast;
     
-    u8_t_ast.primitive = Primitive_Type::u8_t;
-    u16_t_ast.primitive = Primitive_Type::u16_t;
-    u32_t_ast.primitive = Primitive_Type::u32_t;
-    u64_t_ast.primitive = Primitive_Type::u64_t;
-    s8_t_ast.primitive = Primitive_Type::s8_t;
-    s16_t_ast.primitive = Primitive_Type::s16_t;
-    s32_t_ast.primitive = Primitive_Type::s32_t;
-    s64_t_ast.primitive = Primitive_Type::s64_t;
-    bool8_t_ast.primitive = Primitive_Type::bool8_t;
-    bool16_t_ast.primitive = Primitive_Type::bool16_t;
-    bool32_t_ast.primitive = Primitive_Type::bool32_t;
-    bool64_t_ast.primitive = Primitive_Type::bool64_t;
-    f32_t_ast.primitive = Primitive_Type::f32_t;
-    f64_t_ast.primitive = Primitive_Type::f64_t;
-    void_t_ast.primitive = Primitive_Type::void_t;
-    type_t_ast.primitive = Primitive_Type::type_t;
+    u8_t_ast.primitive = PRIM_U8;
+    u16_t_ast.primitive = PRIM_U16;
+    u32_t_ast.primitive = PRIM_U32;
+    u64_t_ast.primitive = PRIM_U64;
+    s8_t_ast.primitive = PRIM_S8;
+    s16_t_ast.primitive = PRIM_S16;
+    s32_t_ast.primitive = PRIM_S32;
+    s64_t_ast.primitive = PRIM_S64;
+    bool8_t_ast.primitive = PRIM_BOOL8;
+    bool16_t_ast.primitive = PRIM_BOOL16;
+    bool32_t_ast.primitive = PRIM_BOOL32;
+    bool64_t_ast.primitive = PRIM_BOOL64;
+    f32_t_ast.primitive = PRIM_F32;
+    f64_t_ast.primitive = PRIM_F64;
+    void_t_ast.primitive = PRIM_VOID;
+    type_t_ast.primitive = PRIM_TYPE;
+    intlike_t_ast.primitive = PRIM_INTLIKE;
+    floatlike_t_ast.primitive = PRIM_FLOATLIKE;
+    numberlike_t_ast.primitive = PRIM_NUMBERLIKE;
+    boollike_t_ast.primitive = PRIM_BOOLLIKE;
 }
 
-void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size)
+void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, Pool_Allocator *ast_pool)
 {
     ctx->program_text = program_text;
     ctx->tokens = tokens;
-    init_pool(&ctx->ast_pool, pool_block_size);
+    ctx->ast_pool = ast_pool;
 }
 
 void report_error(Parsing_Context *ctx, Token *start_section, Token *current,const byte *error_text)
@@ -327,7 +355,7 @@ internal Number_AST make_number_ast(Token number)
     return result;
 }
 
-internal AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 line_offset)
+AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 line_offset)
 {
     new_ast->type = type;
     new_ast->flags = 0;
@@ -336,10 +364,6 @@ internal AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 l
     new_ast->line_offset = line_offset;
     return new_ast;
 }
-
-#define construct_ast(pool, type, line_number, line_offset) \
-(static_cast<type*>(construct_ast_(pool_alloc(type,(pool),1),type::type_value, (line_number), (line_offset))))
-
 
 internal void set_parent_ast(AST *root, AST *parent_ast)
 {
@@ -579,12 +603,12 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                 }
                 ++current;
                 
-                Function_Call_AST *call_ast = construct_ast(&ctx->ast_pool, Function_Call_AST, lhs->line_number, lhs->line_offset);
+                Function_Call_AST *call_ast = construct_ast(ctx->ast_pool, Function_Call_AST, lhs->line_number, lhs->line_offset);
                 
                 call_ast->resolved_type = nullptr;
                 call_ast->function = lhs;
                 call_ast->args.count = args.count;
-                call_ast->args.data = pool_alloc(Expr_AST*, &ctx->ast_pool, args.count);
+                call_ast->args.data = pool_alloc(Expr_AST*, ctx->ast_pool, args.count);
                 
                 for(u64 i = 0; i < args.count; ++i)
                 {
@@ -608,7 +632,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                     {
                         ++current;
                         
-                        Binary_Operator_AST *result = construct_ast(&ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
+                        Binary_Operator_AST *result = construct_ast(ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
                         result->resolved_type = nullptr;
                         result->op = op;
                         result->lhs = lhs;
@@ -639,13 +663,13 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                 if(current->type == Token_Type::ident)
                 {
                     // Note: this doesn't exactly fit into the same category as other identifiers. The namespace that it looks into depends on the lhs
-                    Refer_Ident_AST *rhs = pool_alloc(Refer_Ident_AST, &ctx->ast_pool, 1);
+                    Refer_Ident_AST *rhs = pool_alloc(Refer_Ident_AST, ctx->ast_pool, 1);
                     *rhs = make_refer_ident_ast(*current);
                     // Note: probably doesn't need the parent set, it can hardly hurt for now
                     rhs->parent = parent; 
                     ++current;
                     
-                    Binary_Operator_AST *result = construct_ast(&ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
+                    Binary_Operator_AST *result = construct_ast(ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
                     result->resolved_type = nullptr;
                     result->op = op;
                     result->lhs = lhs;
@@ -677,7 +701,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
             Expr_AST *rhs = parse_expr(ctx, &current, parent, rhs_precedence);
             if(rhs)
             {
-                Binary_Operator_AST *result = construct_ast(&ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
+                Binary_Operator_AST *result = construct_ast(ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
                 result->resolved_type = nullptr;
                 result->op = op;
                 result->lhs = lhs;
@@ -710,7 +734,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
     switch(current->type)
     {
         case Token_Type::ident: {
-            Refer_Ident_AST *result_ident = pool_alloc(Refer_Ident_AST, &ctx->ast_pool, 1);
+            Refer_Ident_AST *result_ident = pool_alloc(Refer_Ident_AST, ctx->ast_pool, 1);
             *result_ident = make_refer_ident_ast(*current);
             result_ident->parent = parent;
             result = result_ident;
@@ -747,10 +771,10 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             }
             ++current;
             
-            Enum_AST *enum_ast = construct_ast(&ctx->ast_pool, Enum_AST, line_number, line_offset);
+            Enum_AST *enum_ast = construct_ast(ctx->ast_pool, Enum_AST, line_number, line_offset);
             enum_ast->resolved_type = nullptr; // TODO: could just make this Type
             enum_ast->values.count = values.count;
-            enum_ast->values.data = pool_alloc(Decl_AST*, &ctx->ast_pool, values.count);
+            enum_ast->values.data = pool_alloc(Decl_AST*, ctx->ast_pool, values.count);
             for(u64 i = 0; i < values.count; ++i)
             {
                 enum_ast->values[i] = values[i];
@@ -799,13 +823,13 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             }
             ++current;
             
-            Struct_AST *struct_ast = construct_ast(&ctx->ast_pool, Struct_AST, line_number, line_offset);
+            Struct_AST *struct_ast = construct_ast(ctx->ast_pool, Struct_AST, line_number, line_offset);
             
             struct_ast->resolved_type = nullptr;
             struct_ast->constants.count = const_count;
             struct_ast->fields.count = var_count;
-            struct_ast->constants.data = pool_alloc(Decl_AST*, &ctx->ast_pool, const_count);
-            struct_ast->fields.data = pool_alloc(Decl_AST*, &ctx->ast_pool, var_count);
+            struct_ast->constants.data = pool_alloc(Decl_AST*, ctx->ast_pool, const_count);
+            struct_ast->fields.data = pool_alloc(Decl_AST*, ctx->ast_pool, var_count);
             
             u64 const_i = 0;
             u64 var_i = 0;
@@ -879,7 +903,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                     
                     if(got_param_name)
                     {
-                        ident = pool_alloc(Def_Ident_AST, &ctx->ast_pool, 1);
+                        ident = pool_alloc(Def_Ident_AST, ctx->ast_pool, 1);
                         *ident = make_def_ident_ast(*previous);
                     }
                 }
@@ -972,28 +996,28 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             }
             
             
-            Function_Type_AST *func_type = construct_ast(&ctx->ast_pool, Function_Type_AST, line_number, line_offset);
+            Function_Type_AST *func_type = construct_ast(ctx->ast_pool, Function_Type_AST, line_number, line_offset);
             
             func_type->resolved_type = nullptr;
             func_type->parameter_types.count = parameters.count;
-            func_type->parameter_types.data = pool_alloc(Expr_AST*, &ctx->ast_pool, parameters.count);
+            func_type->parameter_types.data = pool_alloc(Expr_AST*, ctx->ast_pool, parameters.count);
             
             func_type->return_types.count = 1;
-            func_type->return_types.data = pool_alloc(Expr_AST*, &ctx->ast_pool, 1);
+            func_type->return_types.data = pool_alloc(Expr_AST*, ctx->ast_pool, 1);
             func_type->return_types[0] = return_type;
             
             if(block)
             {
-                Function_AST *result_func = construct_ast(&ctx->ast_pool, Function_AST, line_number, line_offset);
+                Function_AST *result_func = construct_ast(ctx->ast_pool, Function_AST, line_number, line_offset);
                 
                 result_func->resolved_type = nullptr;
                 result_func->prototype = func_type;
                 result_func->block = block;
                 
                 result_func->param_names.count = parameters.count;
-                result_func->param_names.data = pool_alloc(Def_Ident_AST*, &ctx->ast_pool, parameters.count);
+                result_func->param_names.data = pool_alloc(Def_Ident_AST*, ctx->ast_pool, parameters.count);
                 result_func->default_values.count = parameters.count;
-                result_func->default_values.data = pool_alloc(Expr_AST*, &ctx->ast_pool, parameters.count);
+                result_func->default_values.data = pool_alloc(Expr_AST*, ctx->ast_pool, parameters.count);
                 result_func->parent = parent;
                 
                 for(u64 i = 0; i < parameters.count; ++i)
@@ -1028,13 +1052,13 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             }
         } break;
         case Token_Type::number: {
-            Number_AST *result_number = pool_alloc(Number_AST, &ctx->ast_pool, 1);
+            Number_AST *result_number = pool_alloc(Number_AST, ctx->ast_pool, 1);
             *result_number = make_number_ast(*current);
             result = result_number;
             ++current;
         } break;
         case Token_Type::string: {
-            String_AST *result_string = construct_ast(&ctx->ast_pool, String_AST, current->line_number, current->line_offset);
+            String_AST *result_string = construct_ast(ctx->ast_pool, String_AST, current->line_number, current->line_offset);
             
             result_string->resolved_type = nullptr;
             result_string->literal = current->contents;
@@ -1055,7 +1079,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             {
                 String value;
                 value.count = new_size;
-                value.data = pool_alloc(byte, &ctx->ast_pool, new_size);
+                value.data = pool_alloc(byte, ctx->ast_pool, new_size);
                 
                 u64 value_i = 0;
                 for(u64 i = 0; i < literal.count; ++i)
@@ -1182,7 +1206,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             }
             make_bool_ast:
             
-            Bool_AST *bool_ast = construct_ast(&ctx->ast_pool, Bool_AST, current->line_number, current->line_offset);
+            Bool_AST *bool_ast = construct_ast(ctx->ast_pool, Bool_AST, current->line_number, current->line_offset);
             bool_ast->resolved_type = nullptr;
             bool_ast->value = bool_value;
             ++current;
@@ -1224,7 +1248,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 return nullptr;
             }
             
-            Unary_Operator_AST *unary_ast = construct_ast(&ctx->ast_pool, Unary_Operator_AST, line_number, line_offset);
+            Unary_Operator_AST *unary_ast = construct_ast(ctx->ast_pool, Unary_Operator_AST, line_number, line_offset);
             unary_ast->resolved_type = nullptr;
             unary_ast->op = unary_op;
             unary_ast->operand = operand;
@@ -1301,12 +1325,12 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
                 assert(first_ident);
                 
                 // TODO: move allocation to prevent memory leak
-                induction_var = pool_alloc(Def_Ident_AST, &ctx->ast_pool, 1);
+                induction_var = pool_alloc(Def_Ident_AST, ctx->ast_pool, 1);
                 *induction_var = make_def_ident_ast(*first_ident);
                 
                 if(second_ident)
                 {
-                    index_var = pool_alloc(Def_Ident_AST, &ctx->ast_pool, 1);
+                    index_var = pool_alloc(Def_Ident_AST, ctx->ast_pool, 1);
                     *index_var = make_def_ident_ast(*second_ident);
                 }
             }
@@ -1359,7 +1383,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
             return nullptr;
         }
         
-        For_AST *for_ast = construct_ast(&ctx->ast_pool, For_AST, line_number, line_offset);
+        For_AST *for_ast = construct_ast(ctx->ast_pool, For_AST, line_number, line_offset);
         if(by_pointer)
         {
             for_ast->flags |= FOR_FLAG_BY_POINTER;
@@ -1367,7 +1391,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         
         if(!induction_var)
         {
-            induction_var = construct_ast(&ctx->ast_pool, Def_Ident_AST, 0, 0);
+            induction_var = construct_ast(ctx->ast_pool, Def_Ident_AST, 0, 0);
             induction_var->flags |= AST_FLAG_SYNTHETIC;
             induction_var->ident = str_lit("it");
         }
@@ -1383,7 +1407,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         {
             if(!index_var)
             {
-                index_var = construct_ast(&ctx->ast_pool, Def_Ident_AST, 0, 0);
+                index_var = construct_ast(ctx->ast_pool, Def_Ident_AST, 0, 0);
                 index_var->flags |= AST_FLAG_SYNTHETIC;
                 index_var->ident = str_lit("it_index");
             }
@@ -1424,7 +1448,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
             }
         }
         
-        If_AST *if_ast = construct_ast(&ctx->ast_pool, If_AST, line_number, line_offset);
+        If_AST *if_ast = construct_ast(ctx->ast_pool, If_AST, line_number, line_offset);
         if_ast->guard = expr;
         if_ast->then_block = then_block;
         if_ast->else_block = else_block;
@@ -1441,7 +1465,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         }
         Block_AST *body = parse_statement_block(ctx, &current, parent);
         
-        While_AST *while_ast = construct_ast(&ctx->ast_pool, While_AST, line_number, line_offset);
+        While_AST *while_ast = construct_ast(ctx->ast_pool, While_AST, line_number, line_offset);
         while_ast->guard = expr;
         while_ast->body = body;
         
@@ -1457,7 +1481,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
             return nullptr;
         }
         
-        Return_AST *return_ast = construct_ast(&ctx->ast_pool, Return_AST, line_number, line_offset);
+        Return_AST *return_ast = construct_ast(ctx->ast_pool, Return_AST, line_number, line_offset);
         return_ast->function = nullptr;
         return_ast->expr = expr;
         
@@ -1525,7 +1549,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
                 }
                 require_semicolon = true;
                 
-                Assign_AST *assign = construct_ast(&ctx->ast_pool, Assign_AST, line_number, line_offset);
+                Assign_AST *assign = construct_ast(ctx->ast_pool, Assign_AST, line_number, line_offset);
                 
                 assign->ident = make_refer_ident_ast(*at_ident);
                 assign->ident.parent = parent;
@@ -1586,7 +1610,7 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     
     if(current->type == Token_Type::open_brace)
     {
-        result = construct_ast(&ctx->ast_pool, Block_AST, current->line_number, current->line_offset);
+        result = construct_ast(ctx->ast_pool, Block_AST, current->line_number, current->line_offset);
         result->parent = parent;
         ++current;
         
@@ -1604,7 +1628,7 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
                 ++current;
                 
                 result->statements.count = statements.count;
-                result->statements.data = pool_alloc(AST*, &ctx->ast_pool, statements.count);
+                result->statements.data = pool_alloc(AST*, ctx->ast_pool, statements.count);
                 
                 for(u64 i = 0; i < statements.count; ++i)
                 {
@@ -1751,7 +1775,7 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope par
             return nullptr;
         }
         
-        result = construct_ast(&ctx->ast_pool, Decl_AST, line_number, line_offset);
+        result = construct_ast(ctx->ast_pool, Decl_AST, line_number, line_offset);
         result->ident = make_def_ident_ast(*ident_tok);
         result->decl_type = type;
         result->expr = expr;

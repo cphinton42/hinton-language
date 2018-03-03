@@ -9,7 +9,7 @@ struct Parsing_Context
 {
     String program_text;
     Array<Token> tokens;
-    Pool_Allocator ast_pool;
+    Pool_Allocator *ast_pool;
 };
 
 enum class AST_Type : u16
@@ -37,13 +37,16 @@ enum class AST_Type : u16
 };
 
 constexpr u16 AST_FLAG_SYNTHETIC = 1;
+constexpr u16 AST_FLAG_TYPECHECKED = 2;
 
-constexpr u16 DECL_FLAG_CONSTANT = 2;
+constexpr u16 DECL_FLAG_CONSTANT = 4;
 
-constexpr u16 FOR_FLAG_BY_POINTER = 2;
-constexpr u16 FOR_FLAG_OVER_ARRAY = 4;
+constexpr u16 FOR_FLAG_BY_POINTER = 4;
+constexpr u16 FOR_FLAG_OVER_ARRAY = 8;
 
-constexpr u16 NUMBER_FLAG_FLOATLIKE = 2;
+constexpr u16 EXPR_FLAG_CONSTANT = 4;
+
+constexpr u16 NUMBER_FLAG_FLOATLIKE = 8;
 
 
 struct AST
@@ -68,72 +71,81 @@ struct Expr_AST : AST
     Expr_AST *resolved_type;
 };
 
-enum class Primitive_Type : u64
-{
-    size_1 = 0x1,
-    size_2 = 0x2,
-    size_4 = 0x3,
-    size_8 = 0x4,
-    size_mask = 0x7,
-    sign_flag = 0x8,
-    
-    int_like = 0x10,
-    bool_like = 0x20,
-    float_like = 0x30,
-    likeness_mask = 0x30,
-    
-    u8_t = 0x11,
-    u16_t = 0x12,
-    u32_t = 0x13,
-    u64_t = 0x14,
-    uint_t = 0x14,
-    
-    s8_t = 0x19,
-    s16_t = 0x1A,
-    s32_t = 0x1B,
-    s64_t = 0x1C,
-    int_t = 0x1C,
-    
-    bool_t = 0x21,
-    bool8_t = 0x21,
-    bool16_t = 0x22,
-    bool32_t = 0x23,
-    bool64_t = 0x24,
-    
-    f32_t = 0x3B,
-    f64_t = 0x3C,
-    
-    void_t = 0x0,
-    type_t = 0x40,
-};
+// TODO: audit these and convert to them
+constexpr u64 PRIM_NO_SIZE = 0;
+constexpr u64 PRIM_SIZE1 = 0x1;
+constexpr u64 PRIM_SIZE2 = 0x2;
+constexpr u64 PRIM_SIZE4 = 0x3;
+constexpr u64 PRIM_SIZE8 = 0x4;
+constexpr u64 PRIM_SIZE_MASK = 0x7;
+// Note: Internal number types may be abstract and don't specify sign
+constexpr u64 PRIM_SIGNED_INT = 0x8;
+constexpr u64 PRIM_UNSIGNED_INT = 0x10;
+constexpr u64 PRIM_SIGN_MASK = 0x18;
+
+constexpr u64 PRIM_INTLIKE = 0x20;
+constexpr u64 PRIM_FLOATLIKE = 0x40;
+constexpr u64 PRIM_NUMBERLIKE = 0x60;
+constexpr u64 PRIM_BOOLLIKE = 0x80;
+constexpr u64 PRIM_LIKE_MASK = 0xE0;
+
+constexpr u64 PRIM_S8 = 0x29;
+constexpr u64 PRIM_S16 = 0x2A;
+constexpr u64 PRIM_S32 = 0x2B;
+constexpr u64 PRIM_S64 = 0x2C;
+constexpr u64 PRIM_INT = 0x2C;
+
+constexpr u64 PRIM_U8 = 0x31;
+constexpr u64 PRIM_U16 = 0x32;
+constexpr u64 PRIM_U32 = 0x33;
+constexpr u64 PRIM_U64 = 0x34;
+constexpr u64 PRIM_UINT = 0x34;
+
+constexpr u64 PRIM_F32 = 0x43;
+constexpr u64 PRIM_F64 = 0x44;
+
+constexpr u64 PRIM_BOOL = 0x81;
+constexpr u64 PRIM_BOOL8 = 0x81;
+constexpr u64 PRIM_BOOL16 = 0x82;
+constexpr u64 PRIM_BOOL32 = 0x83;
+constexpr u64 PRIM_BOOL64 = 0x84;
+
+constexpr u64 PRIM_VOID = 0;
+constexpr u64 PRIM_TYPE = 0x100;
+
 
 const byte *primitive_names[] = {
-    "void",
-    "","","","","","","","","","","","","","","","",
-    "u8",
-    "u16",
-    "u32",
-    "u64",
-    "","","","",
+    "void", // 0
+    "","","","","","","","","","","","","","","","", // 0x01-0x10
+    "","","","","","","","","","","","","","","","", // 0x11-0x20
+    "","","","","","","","", // 0x21-0x28
     "s8",
     "s16",
     "s32",
     "s64",
-    "","","","",
+    "","","","", // 0x2D-0x30
+    "u8",
+    "u16",
+    "u32",
+    "u64",
+    "","","","","","","","","","","","","","", // 0x34-0x42
+    "f32",
+    "f64",
+    "","","","","","","","","","","","", // 0x45-0x50
+    "","","","","","","","","","","","","","","","", // 0x51-0x60
+    "","","","","","","","","","","","","","","","", // 0x61-0x70
+    "","","","","","","","","","","","","","","","", // 0x71-0x80
     "bool8",
     "bool16",
     "bool32",
     "bool64",
-    "","","","","","","","","","","","","","","","","","","","","",
-    "f32",
-    "f64",
 };
 
 struct Primitive_AST : Expr_AST
 {
     static constexpr AST_Type type_value = AST_Type::primitive_ast;
     
-    Primitive_Type primitive;
+    u64 primitive;
 };
 
 
@@ -153,6 +165,10 @@ extern Primitive_AST f32_t_ast;
 extern Primitive_AST f64_t_ast;
 extern Primitive_AST void_t_ast;
 extern Primitive_AST type_t_ast;
+extern Primitive_AST intlike_t_ast;
+extern Primitive_AST floatlike_t_ast;
+extern Primitive_AST numberlike_t_ast;
+extern Primitive_AST boollike_t_ast;
 
 
 struct Def_Ident_AST : AST
@@ -400,9 +416,15 @@ struct Return_AST : AST
 };
 
 void init_primitive_types();
-void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, u64 pool_block_size);
+void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, Pool_Allocator *ast_pool);
 
 Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx);
 void print_dot(Print_Buffer *pb, Array<Decl_AST*> decls);
+
+AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 line_offset);
+
+#define construct_ast(pool, type, line_number, line_offset) \
+(static_cast<type*>(construct_ast_(pool_alloc(type,(pool),1),type::type_value, (line_number), (line_offset))))
+
 
 #endif // PARSE_H
