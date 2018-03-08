@@ -7,6 +7,8 @@
  - Structs and enums should not capture variable identifiers from local scope
  - Deduplicate all types (e.g. check a hash and strict equality)
    Types probably need to keep line information separate from type information
+   Types also need to be canonicalized, identifiers can stand for complex types
+   For now, create more abstract functions to deal with the more complicated types
  - Code gen
 
 ### Notes
@@ -24,6 +26,7 @@
    This needs to be checked for circular definitions.
  - Need to check for illegal double declarations
    Overloading and shadowing will be ok, but not double declaration in a single scope
+ - Operator typechecking will be totally different once overloading is added
 
 ### Misc TODO's
 
@@ -49,6 +52,7 @@
 
 ### Ideas
 
+ - Group types of AST's in memory? e.g. maybe all identifiers, or all declarations?
  - Calling convention abstraction
  - Stack inspection
  - Stack-like context instead of thread-locals

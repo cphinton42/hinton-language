@@ -10,24 +10,24 @@
 
 derp :: 15;
 
-ident : u32 = ((derp) + 10);
-ident2 : s32 = ident+10*5;
+ident : s64 = ((derp) + 10);
+ident2 : s64 = ident+10*5;
 
 // Avoid undeclared identifier for now
-F :: void;
+
 T1 :: void;
 T2 :: void;
 ret_type :: void;
 
 bar :: 42;
 
-func : F = (param1 : T1, param2 : T2) -> ret_type {};
+func :: (param1 : T1, param2 : T2) -> &u32 {};
 
 id3 : int = ident*10+5;
 
 id4 : u32 = 10 + 10 + 10 + 10 * 3 / 4;
 
-id5 : uint = func(bar)[10 + 10].member + 10;
+id5 : uint = func(bar, bar)[10 + 10]; /* .member + 10; */
 
 
 
@@ -38,10 +38,10 @@ ok := 33.5;
 
 func3 :: () -> u32 {
     while true {
-       func2(ident);
+       func2();
     }
 
-	test_precedence :: void;
+	test_precedence :: (int,int) -> ( (int) -> ( () -> void ) );
 
 	test_precedence(10, 10)(ident)();
 
@@ -49,9 +49,11 @@ func3 :: () -> u32 {
 	const :: 42;
 	other : u32 = 0;
 
-	blah := "Hello World!";
+	t :: true;
 
-    if 10 + 10 {
+	// blah := "Hello World!";
+
+    if true && true {
         var + 42;
     }
     else {
@@ -62,7 +64,8 @@ func3 :: () -> u32 {
 		ok;
 	};
 
-	if other-1 && !id3 || id4 && id5 {
+	// TODO: this seems to be accepted ?
+	if true && !t || id4 && id5 {
 		inner_func();
 	}
 
@@ -70,19 +73,19 @@ func3 :: () -> u32 {
 	whatever := whatever; 
 	arr :: void;
 
-	for arr {}
+	// for arr {}
 	for 0..9 {}
-	for it : arr {}
-	for it,it_index : arr {}
+	// for it : arr {}
+	// for it,it_index : arr {}
 	for it : 0..9 {}
-	for &it : arr {}
-	for &it,it_index : arr {}
+	// for &it : arr {}
+	// for &it,it_index : arr {}
 
 	// These are errors
 	// for &it : 0..9 {}
 	// for it,it_index : 0..9 {} 
 
-	var += 31;
+	// var += 31;
 };
 
 
@@ -107,10 +110,12 @@ Link :: struct {
 };
 
 get_last :: (head : &Link) -> u32 {
+	/*
 	while(head.next) {
 		head = head.next;
 	}
 	return *head.data;
+	*/
 };
 
 Context :: struct {};

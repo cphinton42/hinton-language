@@ -66,26 +66,26 @@ void init_primitive_types()
     numberlike_t_ast.type = AST_Type::primitive_ast;
     boollike_t_ast.type = AST_Type::primitive_ast;
     
-    u8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    u16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    u32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    u64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    s8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    s16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    s32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    s64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    bool8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    bool16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    bool32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    bool64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    f32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    f64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    void_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    type_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    intlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    floatlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    numberlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
-    boollike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPECHECKED;
+    u8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    u16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    u32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    u64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    s8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    s16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    s32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    s64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    bool8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    bool16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    bool32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    bool64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    f32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    f64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    void_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    type_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    intlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    floatlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    numberlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
+    boollike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
     
     u8_t_ast.s = next_serial++;
     u16_t_ast.s = next_serial++;
@@ -128,6 +128,27 @@ void init_primitive_types()
     floatlike_t_ast.resolved_type = &type_t_ast;
     numberlike_t_ast.resolved_type = &type_t_ast;
     boollike_t_ast.resolved_type = &type_t_ast;
+    
+    u8_t_ast.canonical_form = &u8_t_ast;
+    u16_t_ast.canonical_form = &u16_t_ast;
+    u32_t_ast.canonical_form = &u32_t_ast;
+    u64_t_ast.canonical_form = &u64_t_ast;
+    s8_t_ast.canonical_form = &s8_t_ast;
+    s16_t_ast.canonical_form = &s16_t_ast;
+    s32_t_ast.canonical_form = &s32_t_ast;
+    s64_t_ast.canonical_form = &s64_t_ast;
+    bool8_t_ast.canonical_form = &bool8_t_ast;
+    bool16_t_ast.canonical_form = &bool16_t_ast;
+    bool32_t_ast.canonical_form = &bool32_t_ast;
+    bool64_t_ast.canonical_form = &bool64_t_ast;
+    f32_t_ast.canonical_form = &f32_t_ast;
+    f64_t_ast.canonical_form = &f64_t_ast;
+    void_t_ast.canonical_form = &void_t_ast;
+    type_t_ast.canonical_form = &type_t_ast;
+    intlike_t_ast.canonical_form = &intlike_t_ast;
+    floatlike_t_ast.canonical_form = &floatlike_t_ast;
+    numberlike_t_ast.canonical_form = &numberlike_t_ast;
+    boollike_t_ast.canonical_form = &boollike_t_ast;
     
     u8_t_ast.primitive = PRIM_U8;
     u16_t_ast.primitive = PRIM_U16;
@@ -247,6 +268,8 @@ internal Def_Ident_AST make_def_ident_ast(Token ident)
     result.s = next_serial++;
     result.line_number = ident.line_number;
     result.line_offset = ident.line_offset;
+    result.resolved_type = nullptr;
+    result.canonical_form = nullptr;
     result.ident = ident.contents;
     return result;
 }
@@ -263,6 +286,7 @@ internal Refer_Ident_AST make_refer_ident_ast(Token ident)
     result.referred_to = nullptr;
     result.parent = {0};
     result.resolved_type = nullptr;
+    result.canonical_form = nullptr;
     return result;
 }
 
@@ -276,6 +300,7 @@ internal Number_AST make_number_ast(Token number)
     result.line_offset = number.line_offset;
     result.literal = number.contents;
     result.resolved_type = nullptr;
+    result.canonical_form = nullptr;
     String literal = result.literal;
     u64 i_value = 0;
     
@@ -650,6 +675,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                 Function_Call_AST *call_ast = construct_ast(ctx->ast_pool, Function_Call_AST, lhs->line_number, lhs->line_offset);
                 
                 call_ast->resolved_type = nullptr;
+                call_ast->canonical_form = nullptr;
                 call_ast->function = lhs;
                 call_ast->args.count = args.count;
                 call_ast->args.data = pool_alloc(Expr_AST*, ctx->ast_pool, args.count);
@@ -678,6 +704,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                         
                         Binary_Operator_AST *result = construct_ast(ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
                         result->resolved_type = nullptr;
+                        result->canonical_form = nullptr;
                         result->op = op;
                         result->lhs = lhs;
                         result->rhs = rhs;
@@ -715,6 +742,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                     
                     Binary_Operator_AST *result = construct_ast(ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
                     result->resolved_type = nullptr;
+                    result->canonical_form = nullptr;
                     result->op = op;
                     result->lhs = lhs;
                     result->rhs = rhs;
@@ -747,6 +775,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
             {
                 Binary_Operator_AST *result = construct_ast(ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
                 result->resolved_type = nullptr;
+                result->canonical_form = nullptr;
                 result->op = op;
                 result->lhs = lhs;
                 result->rhs = rhs;
@@ -817,6 +846,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             
             Enum_AST *enum_ast = construct_ast(ctx->ast_pool, Enum_AST, line_number, line_offset);
             enum_ast->resolved_type = nullptr; // TODO: could just make this Type
+            enum_ast->canonical_form = nullptr;
             enum_ast->values.count = values.count;
             enum_ast->values.data = pool_alloc(Decl_AST*, ctx->ast_pool, values.count);
             for(u64 i = 0; i < values.count; ++i)
@@ -870,6 +900,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             Struct_AST *struct_ast = construct_ast(ctx->ast_pool, Struct_AST, line_number, line_offset);
             
             struct_ast->resolved_type = nullptr;
+            struct_ast->canonical_form = nullptr;
             struct_ast->constants.count = const_count;
             struct_ast->fields.count = var_count;
             struct_ast->constants.data = pool_alloc(Decl_AST*, ctx->ast_pool, const_count);
@@ -953,6 +984,10 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 }
                 
                 Expr_AST *expr = parse_expr(ctx, &current, blank_parent);
+                if(!expr)
+                {
+                    return nullptr;
+                }
                 if(expect_default)
                 {
                     default_value = expr;
@@ -961,6 +996,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 {
                     type = expr;
                 }
+                // TODO: explicit type and default value at the same time
                 
                 array_add(&parameters, {ident,type,default_value});
                 
@@ -1043,6 +1079,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             Function_Type_AST *func_type = construct_ast(ctx->ast_pool, Function_Type_AST, line_number, line_offset);
             
             func_type->resolved_type = nullptr;
+            func_type->canonical_form = nullptr;
             func_type->parameter_types.count = parameters.count;
             func_type->parameter_types.data = pool_alloc(Expr_AST*, ctx->ast_pool, parameters.count);
             
@@ -1055,6 +1092,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 Function_AST *result_func = construct_ast(ctx->ast_pool, Function_AST, line_number, line_offset);
                 
                 result_func->resolved_type = nullptr;
+                result_func->canonical_form = nullptr;
                 result_func->prototype = func_type;
                 result_func->block = block;
                 
@@ -1105,6 +1143,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             String_AST *result_string = construct_ast(ctx->ast_pool, String_AST, current->line_number, current->line_offset);
             
             result_string->resolved_type = nullptr;
+            result_string->canonical_form = nullptr;
             result_string->literal = current->contents;
             
             String literal = result_string->literal;
@@ -1159,83 +1198,89 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             ++current;
         } break;
         
-        
-        case Token_Type::key_bool: {
+        {
+            u64 primitive;
+            
+            case Token_Type::key_bool: {
+                primitive = PRIM_BOOL;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_bool8: {
+                primitive = PRIM_BOOL8;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_bool16: {
+                primitive = PRIM_BOOL16;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_bool32: {
+                primitive = PRIM_BOOL32;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_bool64: {
+                primitive = PRIM_BOOL64;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_s8: {
+                primitive = PRIM_S8;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_s16: {
+                primitive = PRIM_S16;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_s32: {
+                primitive = PRIM_S32;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_int:
+            case Token_Type::key_s64: {
+                primitive = PRIM_S64;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_type: {
+                primitive = PRIM_TYPE;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_u8: {
+                primitive = PRIM_U8;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_u16: {
+                primitive = PRIM_U16;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_u32: {
+                primitive = PRIM_U32;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_uint:
+            case Token_Type::key_u64: {
+                primitive = PRIM_U64;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_f32: {
+                primitive = PRIM_F32;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_f64: {
+                primitive = PRIM_F64;
+                goto make_primitive_ast;
+            } break;
+            case Token_Type::key_void: {
+                primitive = PRIM_VOID;
+                goto make_primitive_ast;
+            } break;
+            
+            make_primitive_ast:
+            
+            Primitive_AST *primitive_ast = construct_ast(ctx->ast_pool, Primitive_AST, current->line_number, current->line_offset);
+            primitive_ast->resolved_type = &type_t_ast;
+            primitive_ast->canonical_form = nullptr;
+            primitive_ast->primitive = primitive;
             ++current;
-            return &bool8_t_ast;
-        } break;
-        case Token_Type::key_bool8: {
-            ++current;
-            return &bool8_t_ast;
-        } break;
-        case Token_Type::key_bool16: {
-            ++current;
-            return &bool16_t_ast;
-        } break;
-        case Token_Type::key_bool32: {
-            ++current;
-            return &bool32_t_ast;
-        } break;
-        case Token_Type::key_bool64: {
-            ++current;
-            return &bool64_t_ast;
-        } break;
-        case Token_Type::key_s8: {
-            ++current;
-            return &s8_t_ast;
-        } break;
-        case Token_Type::key_s16: {
-            ++current;
-            return &s16_t_ast;
-        } break;
-        case Token_Type::key_s32: {
-            ++current;
-            return &s32_t_ast;
-        } break;
-        case Token_Type::key_s64: {
-            ++current;
-            return &s64_t_ast;
-        } break;
-        case Token_Type::key_type: {
-            ++current;
-            return &type_t_ast;
-        } break;
-        case Token_Type::key_int: {
-            ++current;
-            return &s64_t_ast;
-        } break;
-        case Token_Type::key_u8: {
-            ++current;
-            return &u8_t_ast;
-        } break;
-        case Token_Type::key_u16: {
-            ++current;
-            return &u16_t_ast;
-        } break;
-        case Token_Type::key_u32: {
-            ++current;
-            return &u32_t_ast;
-        } break;
-        case Token_Type::key_u64: {
-            ++current;
-            return &u64_t_ast;
-        } break;
-        case Token_Type::key_uint: {
-            ++current;
-            return &u64_t_ast;
-        } break;
-        case Token_Type::key_f32: {
-            ++current;
-            return &f32_t_ast;
-        } break;
-        case Token_Type::key_f64: {
-            ++current;
-            return &f64_t_ast;
-        } break;
-        case Token_Type::key_void: {
-            ++current;
-            return &void_t_ast;
-        } break;
+            return primitive_ast;
+        }
         
         {
             bool bool_value;
@@ -1252,6 +1297,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             
             Bool_AST *bool_ast = construct_ast(ctx->ast_pool, Bool_AST, current->line_number, current->line_offset);
             bool_ast->resolved_type = nullptr;
+            bool_ast->canonical_form = nullptr;
             bool_ast->value = bool_value;
             ++current;
             result = bool_ast;
@@ -1294,6 +1340,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             
             Unary_Operator_AST *unary_ast = construct_ast(ctx->ast_pool, Unary_Operator_AST, line_number, line_offset);
             unary_ast->resolved_type = nullptr;
+            unary_ast->canonical_form = nullptr;
             unary_ast->op = unary_op;
             unary_ast->operand = operand;
             

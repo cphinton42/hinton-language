@@ -14,30 +14,55 @@ struct Parsing_Context
 
 enum class AST_Type : u16
 {
-    def_ident_ast,
-    refer_ident_ast,
     decl_ast,
     block_ast,
+    while_ast,
+    for_ast,
+    if_ast,
+    assign_ast,
+    return_ast,
+    
+    def_ident_ast,
+    refer_ident_ast,
     function_type_ast,
     function_ast,
     function_call_ast,
     binary_operator_ast,
     number_ast,
-    while_ast,
-    for_ast,
-    if_ast,
     enum_ast,
     struct_ast,
-    assign_ast,
     unary_ast,
-    return_ast,
     primitive_ast,
     string_ast,
     bool_ast,
 };
 
+bool ast_type_is_expr[] = {
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+};
+
+
 constexpr u16 AST_FLAG_SYNTHETIC = 1;
-constexpr u16 AST_FLAG_TYPECHECKED = 2;
+constexpr u16 AST_FLAG_TYPE_INFERRED_TRANSITIVE = 2;
 
 constexpr u16 DECL_FLAG_CONSTANT = 4;
 
@@ -45,7 +70,7 @@ constexpr u16 FOR_FLAG_BY_POINTER = 4;
 constexpr u16 FOR_FLAG_OVER_ARRAY = 8;
 
 constexpr u16 EXPR_FLAG_CONSTANT = 4;
-
+constexpr u16 TYPE_FLAG_CANONICAL = 8; // TODO: is this needed?
 constexpr u16 NUMBER_FLAG_FLOATLIKE = 8;
 
 
@@ -69,9 +94,9 @@ struct Parent_Scope
 struct Expr_AST : AST
 {
     Expr_AST *resolved_type;
+    Expr_AST *canonical_form;
 };
 
-// TODO: audit these and convert to them
 constexpr u64 PRIM_NO_SIZE = 0;
 constexpr u64 PRIM_SIZE1 = 0x1;
 constexpr u64 PRIM_SIZE2 = 0x2;
@@ -112,7 +137,6 @@ constexpr u64 PRIM_BOOL64 = 0x84;
 
 constexpr u64 PRIM_VOID = 0;
 constexpr u64 PRIM_TYPE = 0x100;
-
 
 const byte *primitive_names[] = {
     "void", // 0
@@ -171,7 +195,7 @@ extern Primitive_AST numberlike_t_ast;
 extern Primitive_AST boollike_t_ast;
 
 
-struct Def_Ident_AST : AST
+struct Def_Ident_AST : Expr_AST
 {
     static constexpr AST_Type type_value = AST_Type::def_ident_ast;
     
@@ -184,7 +208,7 @@ struct Refer_Ident_AST : Expr_AST
     
     String ident;
     // Note: referred_to is probably mutually exclusive with parent
-    AST *referred_to;
+    Expr_AST *referred_to;
     Parent_Scope parent;
 };
 

@@ -64,6 +64,9 @@ internal inline void *mem_alloc_(u64 size);
 internal inline void *mem_resize_(void *old_ptr, u64 old_size, u64 new_size);
 internal inline void mem_dealloc_(void *ptr, u64 size);
 
+template<typename T>
+T max(T t1, T t2);
+
 #define defer \
 auto ANONYMOUS_VARIABLE(DEFER_TO_EXIT) = Defer_To_Exit() + [&]()
 
@@ -220,6 +223,12 @@ void array_add(Dynamic_Array<T> *arr, T element)
     
     (*arr)[arr->count] = element;
     ++arr->count;
+}
+
+template<typename T>
+T max(T t1, T t2)
+{
+    return t1 > t2 ? t1 : t2;
 }
 
 // Defer implementation

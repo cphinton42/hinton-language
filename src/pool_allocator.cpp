@@ -3,6 +3,7 @@
 
 internal inline Block_Header* allocate_block(u64 block_size)
 {
+    print_err("INFO: allocating block\n");
     void *memory = mmap(nullptr, block_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if(memory == MAP_FAILED)
     {
