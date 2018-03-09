@@ -110,12 +110,10 @@ Link :: struct {
 };
 
 get_last :: (head : &Link) -> u32 {
-	/*
 	while(head.next) {
 		head = head.next;
 	}
 	return *head.data;
-	*/
 };
 
 Context :: struct {};

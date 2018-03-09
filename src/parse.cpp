@@ -433,6 +433,10 @@ internal void set_parent_ast(AST *root, AST *parent_ast)
             }
             set_parent_ast(function_call_ast->function, parent_ast);
         } break;
+        case AST_Type::access_ast: {
+            Access_AST *access_ast = static_cast<Access_AST*>(root);
+            set_parent_ast(access_ast->lhs, parent_ast);
+        } break;
         case AST_Type::binary_operator_ast: {
             Binary_Operator_AST *binary_operator_ast = static_cast<Binary_Operator_AST*>(root);
             set_parent_ast(binary_operator_ast->lhs, parent_ast);
@@ -501,9 +505,6 @@ internal void set_parent_ast(AST *root, AST *parent_ast)
         case AST_Type::primitive_ast:
         case AST_Type::string_ast:
         case AST_Type::bool_ast: {
-        } break;
-        default: {
-            assert(false);
         } break;
     }
 }
@@ -728,24 +729,15 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
             }
             if(current->type == Token_Type::dot)
             {
-                op = Binary_Operator::access;
-                
                 ++current;
                 if(current->type == Token_Type::ident)
                 {
-                    // Note: this doesn't exactly fit into the same category as other identifiers. The namespace that it looks into depends on the lhs
-                    Refer_Ident_AST *rhs = pool_alloc(Refer_Ident_AST, ctx->ast_pool, 1);
-                    *rhs = make_refer_ident_ast(*current);
-                    // Note: probably doesn't need the parent set, it can hardly hurt for now
-                    rhs->parent = parent; 
-                    ++current;
-                    
-                    Binary_Operator_AST *result = construct_ast(ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
+                    Access_AST *result = construct_ast(ctx->ast_pool, Access_AST, lhs->line_number, lhs->line_offset);
                     result->resolved_type = nullptr;
                     result->canonical_form = nullptr;
-                    result->op = op;
                     result->lhs = lhs;
-                    result->rhs = rhs;
+                    result->ident = current->contents;
+                    ++current;
                     
                     lhs = result;
                     
@@ -1628,6 +1620,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
                         assign_type = Assign_Operator::div_eq;
                     } break;
                     default: {
+                        // The guard above prevents these
                         assert(false);
                     } break;
                 }
@@ -1857,6 +1850,8 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope par
         {
             if(decl_type == Decl_Type::Enum)
             {
+                // TODO: this error is probably a bit off
+                // sometimes :: was already seen ?
                 report_error(ctx, start_section, current, "Expected ';' or '::'");
             }
             else
@@ -2050,6 +2045,11 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast)
                 print_dot_child(pb, call_ast->args[i], s);
             }
         } break;
+        case AST_Type::access_ast: {
+            Access_AST *access_ast = static_cast<Access_AST*>(ast);
+            print_buf(pb, "n%ld[label=\".\"];\n", s);
+            print_dot_child(pb, access_ast->lhs, s);
+        } break;
         case AST_Type::binary_operator_ast: {
             Binary_Operator_AST *bin_ast = static_cast<Binary_Operator_AST*>(ast);
             
@@ -2185,9 +2185,6 @@ internal void print_dot_rec(Print_Buffer *pb, AST *ast)
             {
                 print_buf(pb, "n%ld[label=\"false\"];\n", s);
             }
-        } break;
-        default: {
-            print_err("Unknown AST type in dot printer\n");
         } break;
     }
 }

@@ -3,6 +3,10 @@
 ### Immediate TODO's
 
  - Type checking - the exploration is real
+ - Figure out def/refer identifier situation
+   It would be good to have a level of indirection so that declarations can be changed in one place
+   Probably make a scope structure alongside the AST structure
+ - What's the overloading situation? Complicated by planned ability to inject code into global/module scope
  - Assignments need to take l-values, not just identifiers
  - Structs and enums should not capture variable identifiers from local scope
  - Deduplicate all types (e.g. check a hash and strict equality)
@@ -16,14 +20,13 @@
    - local matching of types
    - constraints by directives, constant checking, etc.
    - transitivity
- - Probably undo intern of Primitive_AST to get back line information
-   Having synthetic versions is be convenient for type inference, do both
  - Differentiate synthetic flag: polymorphic, inferred, internal
  - Declarations introduce a new scope for recursion's sake.
    Doesn't make much sense when declaring a struct's field or enum value though
    Typechecking might take care of that?
  - Default arguments can use other arguments.
    This needs to be checked for circular definitions.
+   Polymorphism will also require this
  - Need to check for illegal double declarations
    Overloading and shadowing will be ok, but not double declaration in a single scope
  - Operator typechecking will be totally different once overloading is added

@@ -27,6 +27,7 @@ enum class AST_Type : u16
     function_type_ast,
     function_ast,
     function_call_ast,
+    access_ast,
     binary_operator_ast,
     number_ast,
     enum_ast,
@@ -285,9 +286,16 @@ struct Bool_AST : Expr_AST
     bool value;
 };
 
+struct Access_AST : Expr_AST
+{
+    static constexpr AST_Type type_value = AST_Type::access_ast;
+    
+    Expr_AST *lhs;
+    String ident;
+};
+
 enum class Binary_Operator : u64
 {
-    access,
     cmp_eq,
     cmp_neq,
     cmp_lt,
@@ -304,7 +312,6 @@ enum class Binary_Operator : u64
 };
 
 const byte *binary_operator_names[] = {
-    ".",
     "+",
     "-",
     "*",
@@ -457,5 +464,129 @@ AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 line_offse
 #define construct_ast(pool, type, line_number, line_offset) \
 (static_cast<type*>(construct_ast_(pool_alloc(type,(pool),1),type::type_value, (line_number), (line_offset))))
 
+
+#define case_non_exprs \
+case AST_Type::decl_ast: \
+case AST_Type::block_ast: \
+case AST_Type::while_ast: \
+case AST_Type::for_ast: \
+case AST_Type::if_ast: \
+case AST_Type::assign_ast: \
+case AST_Type::return_ast
+
+#define case_exprs \
+case AST_Type::def_ident_ast: \
+case AST_Type::refer_ident_ast: \
+case AST_Type::function_type_ast: \
+case AST_Type::function_ast: \
+case AST_Type::function_call_ast: \
+case AST_Type::access_ast: \
+case AST_Type::binary_operator_ast: \
+case AST_Type::number_ast: \
+case AST_Type::enum_ast: \
+case AST_Type::struct_ast: \
+case AST_Type::unary_ast: \
+case AST_Type::primitive_ast: \
+case AST_Type::string_ast: \
+case AST_Type::bool_ast
+
+
+/* Example switch statements to copy-paste.
+TODO: Visitor pattern won't work, is there something else?
+
+switch(ast->type)
+        {
+            case AST_Type::decl_ast: {
+                Decl_AST *decl_ast = static_cast<Decl_AST*>(ast);
+            } break;
+            case AST_Type::block_ast: {
+                Block_AST *block_ast = static_cast<Block_AST*>(ast);
+            } break;
+            case AST_Type::while_ast: {
+                While_AST *while_ast = static_cast<While_AST*>(ast);
+            } break;
+            case AST_Type::for_ast: {
+                For_AST *for_ast = static_cast<For_AST*>(ast);
+            } break;
+            case AST_Type::if_ast: {
+                If_AST *if_ast = static_cast<If_AST*>(ast);
+            } break;
+            case AST_Type::assign_ast: {
+                Assign_AST *assign_ast = static_cast<Assign_AST*>(ast);
+            } break;
+            case AST_Type::return_ast: {
+                Return_AST *return_ast = static_cast<Return_AST*>(ast);
+            } break;
+            case AST_Type::def_ident_ast: {
+                Def_Ident_AST *ident_ast = static_cast<Def_Ident_AST*>(ast);
+            } break;
+            case AST_Type::refer_ident_ast: {
+                Refer_Ident_AST *ident_ast = static_cast<Refer_Ident_AST*>(ast);
+            } break;
+            case AST_Type::function_type_ast: {
+                Function_Type_AST *function_type_ast = static_cast<Function_Type_AST*>(ast);
+            } break;
+            case AST_Type::function_ast: {
+                Function_AST *function_ast = static_cast<Function_AST*>(ast);
+            } break;
+            case AST_Type::function_call_ast: {
+                Function_Call_AST *function_call_ast = static_cast<Function_Call_AST*>(ast);
+            } break;
+            case AST_Type::access_ast: {
+            Access_AST *access_ast = static_cast<Access_AST*>(ast);
+            } break;
+            case AST_Type::binary_operator_ast: {
+                Binary_Operator_AST *binop_ast = static_cast<Binary_Operator_AST*>(ast);
+            } break;
+            case AST_Type::number_ast: {
+                Number_AST *number_ast = static_cast<Number_AST*>(ast);
+            } break;
+            case AST_Type::enum_ast: {
+                Enum_AST *enum_ast = static_cast<Enum_AST*>(ast);
+            } break;
+            case AST_Type::struct_ast: {
+                Struct_AST *struct_ast = static_cast<Struct_AST*>(ast);
+            } break;
+            case AST_Type::unary_ast: {
+                Unary_Operator_AST *unop_ast = static_cast<Unary_Operator_AST*>(ast);
+            } break;
+            case AST_Type::primitive_ast: {
+                Primitive_AST *prim_ast = static_cast<Primitive_AST*>(ast);
+            } break;
+            case AST_Type::string_ast: {
+                String_AST *string_ast = static_cast<String_AST*>(ast);
+            } break;
+            case AST_Type::bool_ast: {
+                Bool_AST *bool_ast = static_cast<Bool_AST*>(ast);
+            } break;
+        }
+        
+        switch(ast->type)
+        {
+            case AST_Type::decl_ast:
+    case AST_Type::block_ast:
+    case AST_Type::while_ast:
+    case AST_Type::for_ast:
+    case AST_Type::if_ast:
+    case AST_Type::assign_ast:
+    case AST_Type::return_ast:
+    
+    case AST_Type::def_ident_ast:
+    case AST_Type::refer_ident_ast:
+    case AST_Type::function_type_ast:
+    case AST_Type::function_ast:
+    case AST_Type::function_call_ast:
+    case AST_Type::access_ast:
+    case AST_Type::binary_operator_ast:
+    case AST_Type::number_ast:
+    case AST_Type::enum_ast:
+    case AST_Type::struct_ast:
+    case AST_Type::unary_ast:
+    case AST_Type::primitive_ast:
+    case AST_Type::string_ast:
+    case AST_Type::bool_ast:
+        }
+        
+*/
 
 #endif // PARSE_H
