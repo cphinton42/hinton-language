@@ -152,7 +152,7 @@ String token_type_names[] = {
     FOR_TOKEN_NAME(X)
 };
 
-
+// Note: performance: could halve size by using relative offsets for string and locating source information elsewhere
 struct Token
 {
     Token_Type type;

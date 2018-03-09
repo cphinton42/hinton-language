@@ -23,7 +23,14 @@ Expr_AST *find_ident(Array<Decl_AST*> globals, String ident, Parent_Scope scope)
                     Decl_AST *decl_ast = static_cast<Decl_AST*>(parent_ast);
                     if(decl_ast->ident.ident == ident)
                     {
-                        return decl_ast->expr;
+                        if(decl_ast->flags & DECL_FLAG_CONSTANT)
+                        {
+                            return decl_ast->expr;
+                        }
+                        else
+                        {
+                            return &decl_ast->ident;
+                        }
                     }
                     scope = decl_ast->parent;
                 } break;
@@ -37,7 +44,14 @@ Expr_AST *find_ident(Array<Decl_AST*> globals, String ident, Parent_Scope scope)
                             Decl_AST *decl_ast = static_cast<Decl_AST*>(block_ast->statements[i]);
                             if(decl_ast->ident.ident == ident)
                             {
-                                return decl_ast->expr;
+                                if(decl_ast->flags & DECL_FLAG_CONSTANT)
+                                {
+                                    return decl_ast->expr;
+                                }
+                                else
+                                {
+                                    return &decl_ast->ident;
+                                }
                             }
                         }
                     }
@@ -79,7 +93,7 @@ Expr_AST *find_ident(Array<Decl_AST*> globals, String ident, Parent_Scope scope)
             {
                 if(globals[i]->ident.ident == ident)
                 {
-                    return globals[i]->expr;
+                    return &globals[i]->ident;
                 }
             }
             return nullptr;
@@ -89,7 +103,6 @@ Expr_AST *find_ident(Array<Decl_AST*> globals, String ident, Parent_Scope scope)
 
 void link_ast(Array<Decl_AST*> globals, Function_AST *current_function, AST *current)
 {
-    
     switch(current->type)
     {
         case AST_Type::refer_ident_ast: {
@@ -255,6 +268,7 @@ struct Typecheck_Result
     bool progress;
 };
 
+
 Typecheck_Result typecheck_result(bool ok, bool waiting, bool progress)
 {
     Typecheck_Result result;
@@ -394,6 +408,113 @@ Typecheck_Result check_expr_is_lvalue(Expr_AST *expr)
     
     return result;
 }
+
+
+Typecheck_Result eval_type(Expr_AST *expr, Expr_AST **eval_out)
+{
+    Typecheck_Result result = typecheck_result(true,false,false);
+    
+    switch(expr->type)
+    {
+        case AST_Type::refer_ident_ast: {
+            Refer_Ident_AST *ident_ast = static_cast<Refer_Ident_AST*>(expr);
+            if(ident_ast->referred_to)
+            {
+                return eval_type(ident_ast->referred_to, eval_out);
+            }
+            else
+            {
+                result.waiting = true;
+            }
+        } break;
+        case AST_Type::def_ident_ast: {
+            Def_Ident_AST *ident_ast = static_cast<Def_Ident_AST*>(expr);
+            if(ident_ast->resolved_type)
+            {
+                if(ident_ast->resolved_type == &type_t_ast)
+                {
+                    *eval_out = ident_ast;
+                }
+                else
+                {
+                    report_error("Expected type", ident_ast);
+                    result.ok = false;
+                }
+            }
+            else
+            {
+                result.waiting = true;
+            }
+        } break;
+        case AST_Type::function_call_ast:
+        case AST_Type::binary_operator_ast: {
+            // TODO: these could probably return a pointer type in the future
+            // specifically, if return type is 'type', function marked as pure, and arguments known at compile time
+            if(expr->resolved_type)
+            {
+                if(expr->resolved_type == &type_t_ast)
+                {
+                    report_error("Type from function call or operator not supported yet", expr);
+                    result.ok = false;
+                }
+                else
+                {
+                    report_error("Expected type", expr);
+                    result.ok = false;
+                }
+            }
+            else
+            {
+                result.waiting = true;
+            }
+        } break;
+        case AST_Type::unary_ast: {
+            Unary_Operator_AST *unop_ast = static_cast<Unary_Operator_AST*>(expr);
+            if(unop_ast->resolved_type)
+            {
+                if(unop_ast->resolved_type == &type_t_ast)
+                {
+                    // TODO: in the future, other operators could yield a type (with operator overloading, a pure operator, and arguments are compile time constants
+                    
+                    if(unop_ast->op != Unary_Operator::ref)
+                    {
+                        report_error("Expected pointer type", expr);
+                        result.ok = false;
+                    }
+                }
+                else
+                {
+                    report_error("Expected type", unop_ast);
+                    result.ok = false;
+                }
+            }
+            else
+            {
+                result.waiting = true;
+            }
+        } break;
+        case AST_Type::function_type_ast:
+        case AST_Type::enum_ast:
+        case AST_Type::struct_ast:
+        case AST_Type::primitive_ast: {
+            *eval_out = expr;
+        } break;
+        
+        case AST_Type::function_ast:
+        case AST_Type::number_ast:
+        case AST_Type::string_ast:
+        case AST_Type::bool_ast: {
+            report_error("Expected type", expr);
+            result.ok = false;
+        } break;
+        default: {
+            assert(false);
+        } break;
+    }
+    
+    return result;
+}
+
 
 Typecheck_Result get_as_pointer_type(Expr_AST *expr, Unary_Operator_AST **type_ast)
 {
@@ -1061,6 +1182,7 @@ Typecheck_Result infer_types(Infer_Context *ctx, Expr_AST *type_to_match, AST *a
                     return r1;
                 }
             }
+            function_type_ast->resolved_type = &type_t_ast;
             
             for(u64 i = 0; i < function_type_ast->parameter_types.count; ++i)
             {
@@ -1100,7 +1222,7 @@ Typecheck_Result infer_types(Infer_Context *ctx, Expr_AST *type_to_match, AST *a
             
             for(u64 i = 0; i < function_ast->param_names.count; ++i)
             {
-                if(function_ast->prototype->parameter_types[i])
+                if(function_ast->prototype->parameter_types[i] && function_ast->param_names[i])
                 {
                     function_ast->param_names[i]->resolved_type = function_ast->prototype->parameter_types[i];
                 }
@@ -1113,7 +1235,10 @@ Typecheck_Result infer_types(Infer_Context *ctx, Expr_AST *type_to_match, AST *a
                     r1 = combine_typecheck_result(r1, r2);
                     if(function_ast->default_values[i]->resolved_type)
                     {
-                        function_ast->param_names[i]->resolved_type = function_ast->default_values[i]->resolved_type;
+                        if(function_ast->param_names[i])
+                        {
+                            function_ast->param_names[i]->resolved_type = function_ast->default_values[i]->resolved_type;
+                        }
                         // Maybe two different arrays? (given, resolved parameter types)
                         function_ast->prototype->parameter_types[i] = function_ast->default_values[i]->resolved_type;
                     }
@@ -1813,7 +1938,7 @@ void infer_all(Pool_Allocator *ast_pool, Array<Decl_AST*> decls)
     }
     
     r1.progress = true;
-    while(r1.waiting && r1.progress)
+    while(r1.progress)
     {
         r1.waiting = false;
         r1.progress = false;
@@ -1831,6 +1956,19 @@ void infer_all(Pool_Allocator *ast_pool, Array<Decl_AST*> decls)
     
     if(r1.waiting)
     {
+#if 1
+        r1.waiting = false;
+        r1.progress = false;
+        // Just for debugging typechecking for now
+        for(u64 i = 0; i < decls.count; ++i)
+        {
+            r2 = infer_types(&ctx, nullptr, decls[i]);
+            r1 = combine_typecheck_result(r1, r2);
+            assert(r1.ok);
+            assert(!r1.waiting);
+        }
+#endif
+        
         print_err("Still waiting on types\n");
         return;
     }

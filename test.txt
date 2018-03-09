@@ -41,7 +41,7 @@ func3 :: () -> u32 {
        func2();
     }
 
-	test_precedence :: (int,int) -> ( (int) -> ( () -> void ) );
+	test_precedence :: (int,int) -> ( (int) -> ( () -> void ) ) {};
 
 	test_precedence(10, 10)(ident)();
 
@@ -70,7 +70,7 @@ func3 :: () -> u32 {
 	}
 
 	// This is necessary for recursive functions, structs, but needs checking
-	whatever := whatever; 
+	// whatever := whatever;
 	arr :: void;
 
 	// for arr {}

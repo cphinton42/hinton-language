@@ -70,8 +70,9 @@ constexpr u16 FOR_FLAG_BY_POINTER = 4;
 constexpr u16 FOR_FLAG_OVER_ARRAY = 8;
 
 constexpr u16 EXPR_FLAG_CONSTANT = 4;
-constexpr u16 TYPE_FLAG_CANONICAL = 8; // TODO: is this needed?
-constexpr u16 NUMBER_FLAG_FLOATLIKE = 8;
+constexpr u16 EXPR_FLAG_COMPILE_TIME_CONSTANT = 8;
+constexpr u16 TYPE_FLAG_CANONICAL = 16; // TODO: is this needed?
+constexpr u16 NUMBER_FLAG_FLOATLIKE = 16;
 
 
 struct AST

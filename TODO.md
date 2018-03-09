@@ -60,3 +60,15 @@
  - Allocator concept - anything implementing an allocator has aliasing rules
    - built-in stack allocator that uses stack pointer (instead of alloca)
  - Manual aliasing annotations
+
+
+/* This should be possible. In this case, the identifier 'it' is compile-time constant and the for loop *must* be unrolled
+
+blah :: ($U : Type, blah : $V) -> void {}
+type_array : []Type : whatever;
+
+for type_array {
+    thing : it;
+    blah(it, thing);
+}
+*/
