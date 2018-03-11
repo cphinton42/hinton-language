@@ -13,6 +13,8 @@ derp :: 15;
 ident : s64 = ((derp) + 10);
 ident2 : s64 = ident+10*5;
 
+ident : s64 = 0;
+
 // Avoid undeclared identifier for now
 
 T1 :: void;

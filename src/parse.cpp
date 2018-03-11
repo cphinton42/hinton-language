@@ -1,177 +1,4 @@
 
-u32 next_serial = 0;
-
-Primitive_AST u8_t_ast;
-Primitive_AST u16_t_ast;
-Primitive_AST u32_t_ast;
-Primitive_AST u64_t_ast;
-Primitive_AST s8_t_ast;
-Primitive_AST s16_t_ast;
-Primitive_AST s32_t_ast;
-Primitive_AST s64_t_ast;
-Primitive_AST bool8_t_ast;
-Primitive_AST bool16_t_ast;
-Primitive_AST bool32_t_ast;
-Primitive_AST bool64_t_ast;
-Primitive_AST f32_t_ast;
-Primitive_AST f64_t_ast;
-Primitive_AST void_t_ast;
-Primitive_AST type_t_ast;
-Primitive_AST intlike_t_ast;
-Primitive_AST floatlike_t_ast;
-Primitive_AST numberlike_t_ast;
-Primitive_AST boollike_t_ast;
-
-void init_primitive_types()
-{
-    zero_memory(&u8_t_ast, 1);
-    zero_memory(&u16_t_ast, 1);
-    zero_memory(&u32_t_ast, 1);
-    zero_memory(&u64_t_ast, 1);
-    zero_memory(&s8_t_ast, 1);
-    zero_memory(&s16_t_ast, 1);
-    zero_memory(&s32_t_ast, 1);
-    zero_memory(&s64_t_ast, 1);
-    zero_memory(&bool8_t_ast, 1);
-    zero_memory(&bool16_t_ast, 1);
-    zero_memory(&bool32_t_ast, 1);
-    zero_memory(&bool64_t_ast, 1);
-    zero_memory(&f32_t_ast, 1);
-    zero_memory(&f64_t_ast, 1);
-    zero_memory(&void_t_ast, 1);
-    zero_memory(&type_t_ast, 1);
-    zero_memory(&intlike_t_ast, 1);
-    zero_memory(&floatlike_t_ast, 1);
-    zero_memory(&numberlike_t_ast, 1);
-    zero_memory(&boollike_t_ast, 1);
-    
-    u8_t_ast.type = AST_Type::primitive_ast;
-    u16_t_ast.type = AST_Type::primitive_ast;
-    u32_t_ast.type = AST_Type::primitive_ast;
-    u64_t_ast.type = AST_Type::primitive_ast;
-    s8_t_ast.type = AST_Type::primitive_ast;
-    s16_t_ast.type = AST_Type::primitive_ast;
-    s32_t_ast.type = AST_Type::primitive_ast;
-    s64_t_ast.type = AST_Type::primitive_ast;
-    bool8_t_ast.type = AST_Type::primitive_ast;
-    bool16_t_ast.type = AST_Type::primitive_ast;
-    bool32_t_ast.type = AST_Type::primitive_ast;
-    bool64_t_ast.type = AST_Type::primitive_ast;
-    f32_t_ast.type = AST_Type::primitive_ast;
-    f64_t_ast.type = AST_Type::primitive_ast;
-    void_t_ast.type = AST_Type::primitive_ast;
-    type_t_ast.type = AST_Type::primitive_ast;
-    intlike_t_ast.type = AST_Type::primitive_ast;
-    floatlike_t_ast.type = AST_Type::primitive_ast;
-    numberlike_t_ast.type = AST_Type::primitive_ast;
-    boollike_t_ast.type = AST_Type::primitive_ast;
-    
-    u8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    u16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    u32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    u64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    s8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    s16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    s32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    s64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    bool8_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    bool16_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    bool32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    bool64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    f32_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    f64_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    void_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    type_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    intlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    floatlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    numberlike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    boollike_t_ast.flags |= AST_FLAG_SYNTHETIC | AST_FLAG_TYPE_INFERRED_TRANSITIVE;
-    
-    u8_t_ast.s = next_serial++;
-    u16_t_ast.s = next_serial++;
-    u32_t_ast.s = next_serial++;
-    u64_t_ast.s = next_serial++;
-    s8_t_ast.s = next_serial++;
-    s16_t_ast.s = next_serial++;
-    s32_t_ast.s = next_serial++;
-    s64_t_ast.s = next_serial++;
-    bool8_t_ast.s = next_serial++;
-    bool16_t_ast.s = next_serial++;
-    bool32_t_ast.s = next_serial++;
-    bool64_t_ast.s = next_serial++;
-    f32_t_ast.s = next_serial++;
-    f64_t_ast.s = next_serial++;
-    void_t_ast.s = next_serial++;
-    type_t_ast.s = next_serial++;
-    intlike_t_ast.s = next_serial++;
-    floatlike_t_ast.s = next_serial++;
-    numberlike_t_ast.s = next_serial++;
-    boollike_t_ast.s = next_serial++;
-    
-    u8_t_ast.resolved_type = &type_t_ast;
-    u16_t_ast.resolved_type = &type_t_ast;
-    u32_t_ast.resolved_type = &type_t_ast;
-    u64_t_ast.resolved_type = &type_t_ast;
-    s8_t_ast.resolved_type = &type_t_ast;
-    s16_t_ast.resolved_type = &type_t_ast;
-    s32_t_ast.resolved_type = &type_t_ast;
-    s64_t_ast.resolved_type = &type_t_ast;
-    bool8_t_ast.resolved_type = &type_t_ast;
-    bool16_t_ast.resolved_type = &type_t_ast;
-    bool32_t_ast.resolved_type = &type_t_ast;
-    bool64_t_ast.resolved_type = &type_t_ast;
-    f32_t_ast.resolved_type = &type_t_ast;
-    f64_t_ast.resolved_type = &type_t_ast;
-    void_t_ast.resolved_type = &type_t_ast;
-    type_t_ast.resolved_type = &type_t_ast;
-    intlike_t_ast.resolved_type = &type_t_ast;
-    floatlike_t_ast.resolved_type = &type_t_ast;
-    numberlike_t_ast.resolved_type = &type_t_ast;
-    boollike_t_ast.resolved_type = &type_t_ast;
-    
-    u8_t_ast.canonical_form = &u8_t_ast;
-    u16_t_ast.canonical_form = &u16_t_ast;
-    u32_t_ast.canonical_form = &u32_t_ast;
-    u64_t_ast.canonical_form = &u64_t_ast;
-    s8_t_ast.canonical_form = &s8_t_ast;
-    s16_t_ast.canonical_form = &s16_t_ast;
-    s32_t_ast.canonical_form = &s32_t_ast;
-    s64_t_ast.canonical_form = &s64_t_ast;
-    bool8_t_ast.canonical_form = &bool8_t_ast;
-    bool16_t_ast.canonical_form = &bool16_t_ast;
-    bool32_t_ast.canonical_form = &bool32_t_ast;
-    bool64_t_ast.canonical_form = &bool64_t_ast;
-    f32_t_ast.canonical_form = &f32_t_ast;
-    f64_t_ast.canonical_form = &f64_t_ast;
-    void_t_ast.canonical_form = &void_t_ast;
-    type_t_ast.canonical_form = &type_t_ast;
-    intlike_t_ast.canonical_form = &intlike_t_ast;
-    floatlike_t_ast.canonical_form = &floatlike_t_ast;
-    numberlike_t_ast.canonical_form = &numberlike_t_ast;
-    boollike_t_ast.canonical_form = &boollike_t_ast;
-    
-    u8_t_ast.primitive = PRIM_U8;
-    u16_t_ast.primitive = PRIM_U16;
-    u32_t_ast.primitive = PRIM_U32;
-    u64_t_ast.primitive = PRIM_U64;
-    s8_t_ast.primitive = PRIM_S8;
-    s16_t_ast.primitive = PRIM_S16;
-    s32_t_ast.primitive = PRIM_S32;
-    s64_t_ast.primitive = PRIM_S64;
-    bool8_t_ast.primitive = PRIM_BOOL8;
-    bool16_t_ast.primitive = PRIM_BOOL16;
-    bool32_t_ast.primitive = PRIM_BOOL32;
-    bool64_t_ast.primitive = PRIM_BOOL64;
-    f32_t_ast.primitive = PRIM_F32;
-    f64_t_ast.primitive = PRIM_F64;
-    void_t_ast.primitive = PRIM_VOID;
-    type_t_ast.primitive = PRIM_TYPE;
-    intlike_t_ast.primitive = PRIM_INTLIKE;
-    floatlike_t_ast.primitive = PRIM_FLOATLIKE;
-    numberlike_t_ast.primitive = PRIM_NUMBERLIKE;
-    boollike_t_ast.primitive = PRIM_BOOLLIKE;
-}
-
 void init_parsing_context(Parsing_Context *ctx, String program_text, Array<Token> tokens, Pool_Allocator *ast_pool)
 {
     ctx->program_text = program_text;
@@ -260,10 +87,10 @@ void report_error(Parsing_Context *ctx, Token *start_section, Token *current,con
     }
 }
 
-internal Def_Ident_AST make_def_ident_ast(Token ident)
+internal Ident_AST make_ident_ast(Token ident)
 {
-    Def_Ident_AST result;
-    result.type = AST_Type::def_ident_ast;
+    Ident_AST result;
+    result.type = AST_Type::ident_ast;
     result.flags = 0;
     result.s = next_serial++;
     result.line_number = ident.line_number;
@@ -271,22 +98,8 @@ internal Def_Ident_AST make_def_ident_ast(Token ident)
     result.resolved_type = nullptr;
     result.canonical_form = nullptr;
     result.ident = ident.contents;
-    return result;
-}
-
-internal Refer_Ident_AST make_refer_ident_ast(Token ident)
-{
-    Refer_Ident_AST result;
-    result.type = AST_Type::refer_ident_ast;
-    result.flags = 0;
-    result.s = next_serial++;
-    result.line_number = ident.line_number;
-    result.line_offset = ident.line_offset;
-    result.ident = ident.contents;
-    result.referred_to = nullptr;
-    result.parent = {0};
-    result.resolved_type = nullptr;
-    result.canonical_form = nullptr;
+    result.scope_index = 0;
+    result.scope = nullptr;
     return result;
 }
 
@@ -380,16 +193,7 @@ internal Number_AST make_number_ast(Token number)
     return result;
 }
 
-AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 line_offset)
-{
-    new_ast->type = type;
-    new_ast->flags = 0;
-    new_ast->s = next_serial++;
-    new_ast->line_number = line_number;
-    new_ast->line_offset = line_offset;
-    return new_ast;
-}
-
+/*
 internal void set_parent_ast(AST *root, AST *parent_ast)
 {
     switch(root->type)
@@ -489,7 +293,7 @@ internal void set_parent_ast(AST *root, AST *parent_ast)
         } break;
         case AST_Type::assign_ast: {
             Assign_AST *assign_ast = static_cast<Assign_AST*>(root);
-            assign_ast->ident.parent.ast = parent_ast;
+            set_parent_ast(assign_ast->lhs, parent_ast);
             set_parent_ast(assign_ast->rhs, parent_ast);
         } break;
         case AST_Type::unary_ast: {
@@ -508,6 +312,7 @@ internal void set_parent_ast(AST *root, AST *parent_ast)
         } break;
     }
 }
+*/
 
 enum class Decl_Type
 {
@@ -516,12 +321,12 @@ enum class Decl_Type
     Enum,
 };
 
-internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent, Decl_Type type);
-internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent);
-internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent);
-internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent, u32 precedence);
+internal Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Decl_Type type);
+internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr);
+internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr);
+internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence);
 
-internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent, u32 precedence = 7)
+internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence = 7)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -529,7 +334,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
         *current_ptr = current;
     };
     
-    Expr_AST *lhs = parse_base_expr(ctx, &current, parent, precedence);
+    Expr_AST *lhs = parse_base_expr(ctx, &current, precedence);
     if(!lhs)
     {
         return nullptr;
@@ -642,7 +447,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                 
                 if(current->type != Token_Type::eof && current->type != Token_Type::close_paren)
                 {
-                    Expr_AST *first_expr = parse_expr(ctx, &current, parent);
+                    Expr_AST *first_expr = parse_expr(ctx, &current);
                     if(!first_expr)
                     {
                         return nullptr;
@@ -659,7 +464,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                     }
                     ++current;
                     
-                    Expr_AST *expr = parse_expr(ctx, &current, parent);
+                    Expr_AST *expr = parse_expr(ctx, &current);
                     if(!expr)
                     {
                         return nullptr;
@@ -696,7 +501,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
                 op = Binary_Operator::subscript;
                 
                 ++current;
-                Expr_AST *rhs = parse_expr(ctx, &current, parent);
+                Expr_AST *rhs = parse_expr(ctx, &current);
                 if(rhs)
                 {
                     if(current->type == Token_Type::close_sqr)
@@ -762,7 +567,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
         if(found_op)
         {
             ++current;
-            Expr_AST *rhs = parse_expr(ctx, &current, parent, rhs_precedence);
+            Expr_AST *rhs = parse_expr(ctx, &current, rhs_precedence);
             if(rhs)
             {
                 Binary_Operator_AST *result = construct_ast(ctx->ast_pool, Binary_Operator_AST, lhs->line_number, lhs->line_offset);
@@ -787,7 +592,7 @@ internal Expr_AST* parse_expr(Parsing_Context *ctx, Token **current_ptr, Parent_
 }
 
 
-internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent, u32 precedence)
+internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, u32 precedence)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -799,9 +604,8 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
     switch(current->type)
     {
         case Token_Type::ident: {
-            Refer_Ident_AST *result_ident = pool_alloc(Refer_Ident_AST, ctx->ast_pool, 1);
-            *result_ident = make_refer_ident_ast(*current);
-            result_ident->parent = parent;
+            Ident_AST *result_ident = pool_alloc(Ident_AST, ctx->ast_pool, 1);
+            *result_ident = make_ident_ast(*current);
             result = result_ident;
             ++current;
         } break;
@@ -821,7 +625,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             
             while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
             {
-                Decl_AST *decl = parse_decl(ctx, &current, parent, Decl_Type::Enum);
+                Decl_AST *decl = parse_decl(ctx, &current, Decl_Type::Enum);
                 if(!decl)
                 {
                     return nullptr;
@@ -866,7 +670,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             
             while(current->type != Token_Type::eof && current->type != Token_Type::close_brace)
             {
-                Decl_AST *decl = parse_decl(ctx, &current, parent, Decl_Type::Struct);
+                Decl_AST *decl = parse_decl(ctx, &current, Decl_Type::Struct);
                 if(!decl)
                 {
                     return nullptr;
@@ -929,13 +733,9 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             bool must_be_func = current->type == Token_Type::close_paren;
             bool must_have_body = false;
             
-            Parent_Scope blank_parent;
-            blank_parent.ast = nullptr;
-            blank_parent.index = 0; // TODO: does this matter?
-            
             while(expect_more)
             {
-                Def_Ident_AST *ident = nullptr;
+                Ident_AST *ident = nullptr;
                 Expr_AST *type = nullptr;
                 Expr_AST *default_value = nullptr;
                 
@@ -970,12 +770,12 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                     
                     if(got_param_name)
                     {
-                        ident = pool_alloc(Def_Ident_AST, ctx->ast_pool, 1);
-                        *ident = make_def_ident_ast(*previous);
+                        ident = pool_alloc(Ident_AST, ctx->ast_pool, 1);
+                        *ident = make_ident_ast(*previous);
                     }
                 }
                 
-                Expr_AST *expr = parse_expr(ctx, &current, blank_parent);
+                Expr_AST *expr = parse_expr(ctx, &current);
                 if(!expr)
                 {
                     return nullptr;
@@ -1002,8 +802,6 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 {
                     expect_more = false;
                 }
-                
-                ++blank_parent.index;
             }
             
             if(current->type != Token_Type::close_paren)
@@ -1033,15 +831,11 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 assert(parameters[0].default_value == nullptr);
                 
                 Expr_AST *result = parameters[0].type;
-                if(parent.ast)
-                {
-                    set_parent_ast(result, parent.ast);
-                }
                 return result;
             }
             
             // Now parse return type
-            Expr_AST *return_type = parse_expr(ctx, &current, blank_parent);
+            Expr_AST *return_type = parse_expr(ctx, &current);
             if(!return_type)
             {
                 return nullptr;
@@ -1051,11 +845,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             
             if(current->type == Token_Type::open_brace)
             {
-                Parent_Scope block_parent;
-                block_parent.ast = nullptr; // Will be filled in later
-                block_parent.index = parameters.count;
-                
-                block = parse_statement_block(ctx, &current, block_parent);
+                block = parse_statement_block(ctx, &current);
                 if(!block)
                 {
                     return nullptr;
@@ -1089,27 +879,17 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 result_func->block = block;
                 
                 result_func->param_names.count = parameters.count;
-                result_func->param_names.data = pool_alloc(Def_Ident_AST*, ctx->ast_pool, parameters.count);
+                result_func->param_names.data = pool_alloc(Ident_AST*, ctx->ast_pool, parameters.count);
                 result_func->default_values.count = parameters.count;
                 result_func->default_values.data = pool_alloc(Expr_AST*, ctx->ast_pool, parameters.count);
-                result_func->parent = parent;
                 
                 for(u64 i = 0; i < parameters.count; ++i)
                 {
                     func_type->parameter_types[i] = parameters[i].type;
                     result_func->param_names[i] = parameters[i].name;
                     result_func->default_values[i] = parameters[i].default_value;
-                    if(result_func->default_values[i])
-                    {
-                        set_parent_ast(result_func->default_values[i], result_func);
-                    }
                 }
                 
-                if(parent.ast)
-                {
-                    set_parent_ast(result_func, parent.ast);
-                }
-                set_parent_ast(block, result_func);
                 result = result_func;
             }
             else
@@ -1117,10 +897,6 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
                 for(u64 i = 0; i < parameters.count; ++i)
                 {
                     func_type->parameter_types[i] = parameters[i].type;
-                }
-                if(parent.ast)
-                {
-                    set_parent_ast(func_type, parent.ast);
                 }
                 result = func_type;
             }
@@ -1324,7 +1100,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
             u32 line_offset = current->line_offset;
             
             ++current;
-            Expr_AST *operand = parse_expr(ctx, &current, parent, precedence);
+            Expr_AST *operand = parse_expr(ctx, &current, precedence);
             if(!operand)
             {
                 return nullptr;
@@ -1349,7 +1125,7 @@ internal Expr_AST *parse_base_expr(Parsing_Context *ctx, Token **current_ptr, Pa
     return result;
 }
 
-internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent)
+internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -1368,8 +1144,8 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         ++current;
         Token *start = current;
         
-        Def_Ident_AST *induction_var = nullptr;
-        Def_Ident_AST *index_var = nullptr;
+        Ident_AST *induction_var = nullptr;
+        Ident_AST *index_var = nullptr;
         bool by_pointer = false;
         
         if(current->type == Token_Type::ref)
@@ -1408,13 +1184,13 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
                 assert(first_ident);
                 
                 // TODO: move allocation to prevent memory leak
-                induction_var = pool_alloc(Def_Ident_AST, ctx->ast_pool, 1);
-                *induction_var = make_def_ident_ast(*first_ident);
+                induction_var = pool_alloc(Ident_AST, ctx->ast_pool, 1);
+                *induction_var = make_ident_ast(*first_ident);
                 
                 if(second_ident)
                 {
-                    index_var = pool_alloc(Def_Ident_AST, ctx->ast_pool, 1);
-                    *index_var = make_def_ident_ast(*second_ident);
+                    index_var = pool_alloc(Ident_AST, ctx->ast_pool, 1);
+                    *index_var = make_ident_ast(*second_ident);
                 }
             }
             else if(must_use_names)
@@ -1432,7 +1208,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         Expr_AST *low_range_expr = nullptr;
         Expr_AST *high_range_expr = nullptr;
         
-        low_range_expr = parse_expr(ctx, &current, parent);
+        low_range_expr = parse_expr(ctx, &current);
         if(!low_range_expr)
         {
             return nullptr;
@@ -1451,16 +1227,14 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
             }
             
             ++current;
-            high_range_expr = parse_expr(ctx, &current, parent);
+            high_range_expr = parse_expr(ctx, &current);
             if(!high_range_expr)
             {
                 return nullptr;
             }
         }
         
-        Parent_Scope block_scope = {0};
-        
-        Block_AST *body = parse_statement_block(ctx, &current, block_scope);
+        Block_AST *body = parse_statement_block(ctx, &current);
         if(!body)
         {
             return nullptr;
@@ -1474,9 +1248,11 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         
         if(!induction_var)
         {
-            induction_var = construct_ast(ctx->ast_pool, Def_Ident_AST, 0, 0);
+            induction_var = construct_ast(ctx->ast_pool, Ident_AST, 0, 0);
             induction_var->flags |= AST_FLAG_SYNTHETIC;
             induction_var->ident = str_lit("it");
+            induction_var->scope_index = 0;
+            induction_var->scope = nullptr;
         }
         
         for_ast->induction_var = induction_var;
@@ -1490,9 +1266,11 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         {
             if(!index_var)
             {
-                index_var = construct_ast(ctx->ast_pool, Def_Ident_AST, 0, 0);
+                index_var = construct_ast(ctx->ast_pool, Ident_AST, 0, 0);
                 index_var->flags |= AST_FLAG_SYNTHETIC;
                 index_var->ident = str_lit("it_index");
+                index_var->scope_index = 0;
+                index_var->scope = nullptr;
             }
             
             for_ast->flags |= FOR_FLAG_OVER_ARRAY;
@@ -1500,20 +1278,17 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
             for_ast->array_expr = low_range_expr;
         }
         
-        for_ast->parent = parent;
-        for_ast->body->parent.ast = for_ast;
-        
         result = for_ast;
     }
     else if(current->type == Token_Type::key_if)
     {
         ++current;
-        Expr_AST *expr = parse_expr(ctx, &current, parent);
+        Expr_AST *expr = parse_expr(ctx, &current);
         if(!expr)
         {
             return nullptr;
         }
-        Block_AST *then_block = parse_statement_block(ctx, &current, parent);
+        Block_AST *then_block = parse_statement_block(ctx, &current);
         if(!then_block)
         {
             return nullptr;
@@ -1524,7 +1299,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
         if(current->type == Token_Type::key_else)
         {
             ++current;
-            else_block = parse_statement_block(ctx, &current, parent);
+            else_block = parse_statement_block(ctx, &current);
             if(!else_block)
             {
                 return nullptr;
@@ -1541,12 +1316,12 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
     else if(current->type == Token_Type::key_while)
     {
         ++current;
-        Expr_AST *expr = parse_expr(ctx, &current, parent);
+        Expr_AST *expr = parse_expr(ctx, &current);
         if(!expr)
         {
             return nullptr;
         }
-        Block_AST *body = parse_statement_block(ctx, &current, parent);
+        Block_AST *body = parse_statement_block(ctx, &current);
         
         While_AST *while_ast = construct_ast(ctx->ast_pool, While_AST, line_number, line_offset);
         while_ast->guard = expr;
@@ -1558,7 +1333,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
     {
         require_semicolon = true;
         ++current;
-        Expr_AST *expr = parse_expr(ctx, &current, parent);
+        Expr_AST *expr = parse_expr(ctx, &current);
         if(!expr)
         {
             return nullptr;
@@ -1572,11 +1347,11 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
     }
     else if(current->type == Token_Type::open_brace)
     {
-        result = parse_statement_block(ctx, &current, parent);
+        result = parse_statement_block(ctx, &current);
     }
     else
     {
-        // Expect an expression, declaration, or operation (e.g. +=)
+        // Expect an expression, declaration, or assignment (e.g. =,+=)
         
         if(current->type == Token_Type::ident)
         {
@@ -1588,77 +1363,83 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
             {
                 // Expect a declaration
                 current = at_ident;
-                Decl_AST *decl = parse_decl(ctx, &current, parent, Decl_Type::Statement);
+                Decl_AST *decl = parse_decl(ctx, &current, Decl_Type::Statement);
                 if(!decl)
                 {
                     return nullptr;
                 }
                 result = decl;
             }
-            else if(current->type == Token_Type::equal ||
-                    current->type == Token_Type::mul_eq ||
-                    current->type == Token_Type::add_eq ||
-                    current->type == Token_Type::sub_eq ||
-                    current->type == Token_Type::div_eq)
-            {
-                Assign_Operator assign_type;
-                switch(current->type)
-                {
-                    case Token_Type::equal: {
-                        assign_type = Assign_Operator::equal;
-                    } break;
-                    case Token_Type::mul_eq: {
-                        assign_type = Assign_Operator::mul_eq;
-                    } break;
-                    case Token_Type::add_eq: {
-                        assign_type = Assign_Operator::add_eq;
-                    } break;
-                    case Token_Type::sub_eq: {
-                        assign_type = Assign_Operator::sub_eq;
-                    } break;
-                    case Token_Type::div_eq: {
-                        assign_type = Assign_Operator::div_eq;
-                    } break;
-                    default: {
-                        // The guard above prevents these
-                        assert(false);
-                    } break;
-                }
-                
-                ++current;
-                Expr_AST *expr = parse_expr(ctx, &current, parent);
-                if(!expr)
-                {
-                    return nullptr;
-                }
-                require_semicolon = true;
-                
-                Assign_AST *assign = construct_ast(ctx->ast_pool, Assign_AST, line_number, line_offset);
-                
-                assign->ident = make_refer_ident_ast(*at_ident);
-                assign->ident.parent = parent;
-                assign->assign_type = assign_type;
-                assign->rhs = expr;
-                
-                result = assign;
-            }
             else
             {
-                // Expect an expression;
+                // Expect an expression or assignment
                 current = at_ident;
-                Expr_AST *expr = parse_expr(ctx, &current, parent);
+                
+                Expr_AST *expr = parse_expr(ctx, &current);
                 if(!expr)
                 {
                     return nullptr;
                 }
-                result = expr;
+                
+                if(current->type == Token_Type::equal ||
+                   current->type == Token_Type::mul_eq ||
+                   current->type == Token_Type::add_eq ||
+                   current->type == Token_Type::sub_eq ||
+                   current->type == Token_Type::div_eq)
+                {
+                    // expect an assignment, 'expr' should be the l-value (checked later)
+                    
+                    Assign_Operator assign_type;
+                    switch(current->type)
+                    {
+                        case Token_Type::equal: {
+                            assign_type = Assign_Operator::equal;
+                        } break;
+                        case Token_Type::mul_eq: {
+                            assign_type = Assign_Operator::mul_eq;
+                        } break;
+                        case Token_Type::add_eq: {
+                            assign_type = Assign_Operator::add_eq;
+                        } break;
+                        case Token_Type::sub_eq: {
+                            assign_type = Assign_Operator::sub_eq;
+                        } break;
+                        case Token_Type::div_eq: {
+                            assign_type = Assign_Operator::div_eq;
+                        } break;
+                        default: {
+                            // The guard above prevents these
+                            assert(false);
+                        } break;
+                    }
+                    
+                    ++current;
+                    Expr_AST *rhs = parse_expr(ctx, &current);
+                    if(!rhs)
+                    {
+                        return nullptr;
+                    }
+                    
+                    Assign_AST *assign = construct_ast(ctx->ast_pool, Assign_AST, line_number, line_offset);
+                    
+                    assign->assign_type = assign_type;
+                    assign->lhs = expr;
+                    assign->rhs = rhs;
+                    
+                    result = assign;
+                }
+                else
+                {
+                    result = expr;
+                }
+                
                 require_semicolon = true;
             }
         }
         else
         {
             // Expect an expression;
-            Expr_AST *expr = parse_expr(ctx, &current, parent);
+            Expr_AST *expr = parse_expr(ctx, &current);
             if(!expr)
             {
                 return nullptr;
@@ -1683,7 +1464,7 @@ internal AST *parse_statement(Parsing_Context *ctx, Token **current_ptr, Parent_
     return result;
 }
 
-internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent)
+internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_ptr)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -1695,12 +1476,7 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     if(current->type == Token_Type::open_brace)
     {
         result = construct_ast(ctx->ast_pool, Block_AST, current->line_number, current->line_offset);
-        result->parent = parent;
         ++current;
-        
-        Parent_Scope new_parent;
-        new_parent.ast = result;
-        new_parent.index = 0;
         
         // TODO: memory leak
         Dynamic_Array<AST*> statements = {0};
@@ -1722,11 +1498,10 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
             }
             else
             {
-                AST *stmt = parse_statement(ctx, &current, new_parent);
+                AST *stmt = parse_statement(ctx, &current);
                 if(stmt)
                 {
                     array_add(&statements, stmt);
-                    ++new_parent.index;
                 }
                 else
                 {
@@ -1743,7 +1518,7 @@ internal Block_AST *parse_statement_block(Parsing_Context *ctx, Token **current_
     return result;
 }
 
-Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope parent, Decl_Type decl_type)
+Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Decl_Type decl_type)
 {
     Token *current = *current_ptr;
     Token *start_section = current;
@@ -1761,8 +1536,6 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope par
         ++current;
         Expr_AST *type = nullptr;
         
-        Parent_Scope blank_parent = {0};
-        
         bool not_enum = (decl_type != Decl_Type::Enum);
         // TODO: remove require_value, variables should be able to take on default values (e.g. zero initialized)
         bool require_value = (decl_type == Decl_Type::Statement);
@@ -1772,7 +1545,7 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope par
         if(current->type == Token_Type::colon && not_enum)
         {
             ++current;
-            type = parse_expr(ctx, &current, blank_parent);
+            type = parse_expr(ctx, &current);
             if(!type)
             {
                 return nullptr;
@@ -1833,7 +1606,7 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope par
                 report_error(ctx, start_section, current, "Expected expression");
                 return nullptr;
             }
-            expr = parse_expr(ctx, &current, blank_parent);
+            expr = parse_expr(ctx, &current);
             if(!expr)
             {
                 return nullptr;
@@ -1862,19 +1635,9 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Parent_Scope par
         }
         
         result = construct_ast(ctx->ast_pool, Decl_AST, line_number, line_offset);
-        result->ident = make_def_ident_ast(*ident_tok);
+        result->ident = make_ident_ast(*ident_tok);
         result->decl_type = type;
         result->expr = expr;
-        
-        result->parent = parent;
-        if(result->decl_type)
-        {
-            set_parent_ast(result->decl_type, result);
-        }
-        if(result->expr)
-        {
-            set_parent_ast(result->expr, result);
-        }
         
         if(is_constant)
         {
@@ -1897,16 +1660,13 @@ Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx)
     Token *current = ctx->tokens.data;
     Token *start_section = current;
     
-    Parent_Scope global_scope = {0};
-    
     while(current->type != Token_Type::eof)
     {
         start_section = current;
-        Decl_AST *decl = parse_decl(ctx, &current, global_scope, Decl_Type::Statement);
+        Decl_AST *decl = parse_decl(ctx, &current, Decl_Type::Statement);
         if(decl)
         {
             array_add(&result, decl);
-            ++global_scope.index;
         }
         else
         {
@@ -1930,274 +1690,4 @@ Dynamic_Array<Decl_AST*> parse_tokens(Parsing_Context *ctx)
     }
     
     return result;
-}
-
-bool draw_parents = true;
-
-internal void print_dot_rec(Print_Buffer *pb, AST *ast);
-internal inline void print_dot_child(Print_Buffer *pb, AST *child, u64 parent_serial)
-{
-    u64 child_serial = child->s;
-    print_buf(pb, "n%ld->n%ld;\n", parent_serial, child_serial);
-    print_dot_rec(pb, child);
-}
-
-internal void print_dot_rec(Print_Buffer *pb, AST *ast)
-{
-    u32 s = ast->s;
-    switch(ast->type)
-    {
-        case AST_Type::refer_ident_ast: {
-            Refer_Ident_AST *ident_ast = static_cast<Refer_Ident_AST*>(ast);
-            print_buf(pb, "n%ld[label=\"%.*s\"];\n", s, ident_ast->ident.count, ident_ast->ident.data);
-            if(draw_parents && ident_ast->parent.ast)
-            {
-                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, ident_ast->parent.ast->s);
-            }
-        } break;
-        case AST_Type::def_ident_ast: {
-            Def_Ident_AST *ident_ast = static_cast<Def_Ident_AST*>(ast);
-            print_buf(pb, "n%ld[label=\"%.*s\"];\n", s, (u32)ident_ast->ident.count, ident_ast->ident.data);
-        } break;
-        case AST_Type::decl_ast: {
-            Decl_AST *decl_ast = static_cast<Decl_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"Declare %.*s\"];\nn%ld[shape=box];\n", s, (u32)decl_ast->ident.ident.count, decl_ast->ident.ident.data, s);
-            if(decl_ast->decl_type)
-            {
-                print_dot_child(pb, decl_ast->decl_type, s);
-            }
-            if(decl_ast->expr)
-            {
-                print_dot_child(pb, decl_ast->expr, s);
-            }
-            if(draw_parents && decl_ast->parent.ast)
-            {
-                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, decl_ast->parent.ast->s);
-            }
-        } break;
-        case AST_Type::block_ast: {
-            Block_AST *block_ast = static_cast<Block_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"Block\"];\nn%ld[shape=box];\n", s, s);
-            
-            for(u64 i = 0; i < block_ast->statements.count; ++i)
-            {
-                print_dot_child(pb, block_ast->statements[i], s);
-            }
-            if(draw_parents && block_ast->parent.ast)
-            {
-                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, block_ast->parent.ast->s);
-            }
-        } break;
-        case AST_Type::function_type_ast: {
-            Function_Type_AST *type_ast = static_cast<Function_Type_AST*>(ast);
-            print_buf(pb, "n%ld[label=\"Function Type\"];\n", s);
-            
-            for(u64 i = 0; i < type_ast->parameter_types.count; ++i)
-            {
-                if(type_ast->parameter_types[i])
-                {
-                    print_dot_child(pb, type_ast->parameter_types[i], s);
-                }
-            }
-            for(u64 i = 0; i < type_ast->return_types.count; ++i)
-            {
-                if(type_ast->return_types[i])
-                {
-                    print_dot_child(pb, type_ast->return_types[i], s);
-                }
-            }
-        } break;
-        case AST_Type::function_ast: {
-            Function_AST *function_ast = static_cast<Function_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"Function\"];\nn%ld[shape=box];\n", s, s);
-            
-            print_dot_child(pb, function_ast->prototype, s);
-            for(u64 i = 0; i < function_ast->param_names.count; ++i)
-            {
-                if(function_ast->param_names[i])
-                {
-                    print_dot_child(pb, function_ast->param_names[i], s);
-                }
-            }
-            for(u64 i = 0; i < function_ast->default_values.count; ++i)
-            {
-                if(function_ast->default_values[i])
-                {
-                    print_dot_child(pb, function_ast->default_values[i], s);
-                }
-            }
-            if(draw_parents && function_ast->parent.ast)
-            {
-                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, function_ast->parent.ast->s);
-            }
-            print_dot_child(pb, function_ast->block, s);
-        } break;
-        case AST_Type::function_call_ast: {
-            Function_Call_AST *call_ast = static_cast<Function_Call_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"function call\"];\n", s);
-            print_dot_child(pb, call_ast->function, s);
-            for(u64 i = 0; i < call_ast->args.count; ++i)
-            {
-                print_dot_child(pb, call_ast->args[i], s);
-            }
-        } break;
-        case AST_Type::access_ast: {
-            Access_AST *access_ast = static_cast<Access_AST*>(ast);
-            print_buf(pb, "n%ld[label=\".\"];\n", s);
-            print_dot_child(pb, access_ast->lhs, s);
-        } break;
-        case AST_Type::binary_operator_ast: {
-            Binary_Operator_AST *bin_ast = static_cast<Binary_Operator_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"%s\"];\n", s, binary_operator_names[(u64)bin_ast->op]);
-            print_dot_child(pb, bin_ast->lhs, s);
-            print_dot_child(pb, bin_ast->rhs, s);
-        } break;
-        case AST_Type::number_ast: {
-            Number_AST *number_ast = static_cast<Number_AST*>(ast);
-            print_buf(pb, "n%ld[label=\"%.*s\"];\n", s, (u32)number_ast->literal.count, number_ast->literal.data);
-        } break;
-        case AST_Type::while_ast: {
-            While_AST *while_ast = static_cast<While_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"while\"];\n", s);
-            print_dot_child(pb, while_ast->guard, s);
-            print_dot_child(pb, while_ast->body, s);
-        } break;
-        case AST_Type::for_ast: {
-            For_AST *for_ast = static_cast<For_AST*>(ast);
-            
-            if(for_ast->flags & FOR_FLAG_OVER_ARRAY)
-            {
-                if(for_ast->flags & FOR_FLAG_BY_POINTER)
-                {
-                    print_buf(pb, "n%ld[label=\"for &(array)\"];\n", s);
-                }
-                else
-                {
-                    print_buf(pb, "n%ld[label=\"for (array)\"];\n", s);
-                }
-            }
-            else
-            {
-                assert(!(for_ast->flags & FOR_FLAG_BY_POINTER));
-                print_buf(pb, "n%ld[label=\"for (range)\"];\n", s);
-            }
-            print_buf(pb, "n%ld[shape=box];\n", s);
-            if(draw_parents && for_ast->parent.ast)
-            {
-                print_buf(pb, "n%ld->n%ld[style=dotted];\n", s, for_ast->parent.ast->s);
-            }
-            
-            if(for_ast->induction_var)
-            {
-                print_dot_child(pb, for_ast->induction_var, s);
-            }
-            if(for_ast->flags & FOR_FLAG_OVER_ARRAY)
-            {
-                if(for_ast->index_var)
-                {
-                    print_dot_child(pb, for_ast->index_var, s);
-                }
-                print_dot_child(pb, for_ast->array_expr, s);
-            }
-            else
-            {
-                print_dot_child(pb, for_ast->low_expr, s);
-                print_dot_child(pb, for_ast->high_expr, s);
-            }
-            
-            print_dot_child(pb, for_ast->body, s);
-        } break;
-        case AST_Type::if_ast: {
-            If_AST *if_ast = static_cast<If_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"if\"];\n", s);
-            print_dot_child(pb, if_ast->guard, s);
-            print_dot_child(pb, if_ast->then_block, s);
-            if(if_ast->else_block)
-            {
-                print_dot_child(pb, if_ast->else_block, s);
-            }
-        } break;
-        case AST_Type::struct_ast: {
-            Struct_AST *struct_ast = static_cast<Struct_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"struct\"];\n", s);
-            for(u64 i = 0; i < struct_ast->constants.count; ++i)
-            {
-                print_dot_child(pb, struct_ast->constants[i], s);
-            }
-            for(u64 i = 0; i < struct_ast->fields.count; ++i)
-            {
-                print_dot_child(pb, struct_ast->fields[i], s);
-            }
-        } break;
-        case AST_Type::enum_ast: {
-            Enum_AST *enum_ast = static_cast<Enum_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"enum\"];\n", s);
-            for(u64 i = 0; i < enum_ast->values.count; ++i)
-            {
-                print_dot_child(pb, enum_ast->values[i], s);
-            }
-        } break;
-        case AST_Type::assign_ast: {
-            Assign_AST *assign_ast = static_cast<Assign_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"%s\"];\n", s, assign_names[(u64)assign_ast->assign_type]);
-            print_dot_child(pb, &assign_ast->ident, s);
-            print_dot_child(pb, assign_ast->rhs, s);
-        } break;
-        case AST_Type::unary_ast: {
-            Unary_Operator_AST *unary_ast = static_cast<Unary_Operator_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"%s\"];\n", s, unary_operator_names[(u64)unary_ast->op]);
-            print_dot_child(pb, unary_ast->operand, s);
-        } break;
-        case AST_Type::return_ast: {
-            Return_AST *return_ast = static_cast<Return_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"return\"];\n", s);
-            print_dot_child(pb, return_ast->expr, s);
-        } break;
-        case AST_Type::primitive_ast: {
-            Primitive_AST *primitive_ast = static_cast<Primitive_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"%s\"];\n", s, primitive_names[(u64)primitive_ast->primitive]);
-        } break;
-        case AST_Type::string_ast: {
-            String_AST *string_ast = static_cast<String_AST*>(ast);
-            
-            print_buf(pb, "n%ld[label=\"\\\"%.*s\\\"\"];\n", s, string_ast->literal.count, string_ast->literal.data);
-        } break;
-        case AST_Type::bool_ast: {
-            Bool_AST *bool_ast = static_cast<Bool_AST*>(ast);
-            if(bool_ast->value)
-            {
-                print_buf(pb, "n%ld[label=\"true\"];\n", s);
-            }
-            else
-            {
-                print_buf(pb, "n%ld[label=\"false\"];\n", s);
-            }
-        } break;
-    }
-}
-
-void print_dot(Print_Buffer *pb, Array<Decl_AST*> decls)
-{
-    print_buf(pb, "digraph decls {\n");
-    
-    for(u64 i = 0; i < decls.count; ++i)
-    {
-        print_dot_rec(pb, decls[i]);
-    }
-    
-    print_buf(pb, "}\n");
-    flush_buffer(pb);
 }
