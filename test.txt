@@ -13,12 +13,9 @@ derp :: 15;
 ident : s64 = ((derp) + 10);
 ident2 : s64 = ident+10*5;
 
-ident : s64 = 0;
-
 // Avoid undeclared identifier for now
 
-T1 :: void;
-T2 :: void;
+
 ret_type :: void;
 
 bar :: 42;
@@ -27,11 +24,12 @@ func :: (param1 : T1, param2 : T2) -> &u32 {};
 
 id3 : int = ident*10+5;
 
-id4 : u32 = 10 + 10 + 10 + 10 * 3 / 4;
+id4 : s64 = 10 + 10 + 10 + 10 * 3 / 4;
 
 id5 : uint = func(bar, bar)[10 + 10]; /* .member + 10; */
 
-
+T1 :: u64;
+T2 :: s64;
 
 func2 :: () -> u32 {};
 
@@ -42,6 +40,8 @@ func3 :: () -> u32 {
     while true {
        func2();
     }
+
+	ident := 0;
 
 	test_precedence :: (int,int) -> ( (int) -> ( () -> void ) ) {};
 
@@ -56,10 +56,10 @@ func3 :: () -> u32 {
 	// blah := "Hello World!";
 
     if true && true {
-        var + 42;
+        var + 42.0;
     }
     else {
-        func(const);
+        func(const, const);
     }
 
 	inner_func :: (param1 : T1, parma2 := default_val) -> ret_type {
@@ -67,10 +67,10 @@ func3 :: () -> u32 {
 	};
 
 	// TODO: this seems to be accepted ?
-	if true && !t || id4 && id5 {
-		inner_func();
+	if true && !t || (id4 == 0) && (id5 == 0) {
+		inner_func(other, other);
 	}
-
+	
 	// This is necessary for recursive functions, structs, but needs checking
 	// whatever := whatever;
 	arr :: void;
@@ -102,7 +102,7 @@ data_type :: struct {
 
 thing :: enum {
 	const1 :: 1;
-	const2;
+	const2 :: 2;
 	const3 :: 3;
 };
 
@@ -115,7 +115,7 @@ get_last :: (head : &Link) -> u32 {
 	while(head.next) {
 		head = head.next;
 	}
-	return *head.data;
+	return head.data.field1;
 };
 
 Context :: struct {};

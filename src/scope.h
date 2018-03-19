@@ -89,8 +89,8 @@ void init_hashed_scope(Hashed_Scope *hs, Hashed_Scope *parent_scope, u64 index_i
 bool scope_insert(Hashed_Scope *hs, Scope_Entry entry);
 bool scope_insert(Hashed_Scope *hs, Scope_Entry entry, u64 hash);
 void scope_resize(Hashed_Scope *hs, u64 new_size);
-Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index);
-Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index, u64 hash);
+Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index, bool recurse = true);
+Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index, u64 hash, bool recurse = true);
 
 
 
@@ -238,6 +238,7 @@ struct Scoping_Context
 {
     Atom_Table *atom_table;
     Pool_Allocator *ast_pool;
+    bool success;
 };
 
 struct Decl_AST;

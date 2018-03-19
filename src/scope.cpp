@@ -41,14 +41,14 @@ void scope_resize(Hashed_Scope *hs, u64 new_size)
 {
     set_resize(&hs->entry_set, new_size);
 }
-Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index)
+Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index, bool recurse)
 {
-    return scope_find(hs, key, scope_index, compute_hash64(key));
+    return scope_find(hs, key, scope_index, compute_hash64(key), recurse);
 }
 
-Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index, u64 hash)
+Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index, u64 hash, bool recurse)
 {
-    while(hs)
+    do
     {
         Scope_Entry *entry = set_find(&hs->entry_set, key, hash);
         if(entry && scope_index >= entry->index)
@@ -61,6 +61,7 @@ Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index, u64 hash)
             hs = hs->parent_scope;
         }
     }
+    while(hs && recurse);
     return nullptr;
 }
 
@@ -94,30 +95,23 @@ Atom atomize_string(Atom_Table *at, String str)
     }
 }
 
-/*
-Hashed_Scope *file_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
-            init_hashed_scope(file_scope, nullptr, 0, 16);
-*/
+
 
 internal
-bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, Hashed_Scope *scope, u64 scope_index, AST *ast)
+void create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, Hashed_Scope *scope, u64 scope_index, AST *ast)
 {
     if(!ast)
     {
-        return true;
+        return;
     }
-    bool b;
-#define return_if_failed if(!b){ return false; }
     
     switch(ast->type)
     {
         case AST_Type::decl_ast: {
             Decl_AST *decl_ast = static_cast<Decl_AST*>(ast);
-            b = create_scope_metadata(ctx, func, type, scope, scope_index, &decl_ast->ident);
-            return_if_failed;
-            b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, decl_ast->decl_type);
-            return_if_failed;
-            return create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, decl_ast->expr);
+            create_scope_metadata(ctx, func, IDENT_DECL, scope, scope_index, &decl_ast->ident);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, decl_ast->decl_type);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, decl_ast->expr);
         } break;
         case AST_Type::block_ast: {
             Block_AST *block_ast = static_cast<Block_AST*>(ast);
@@ -127,15 +121,13 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
             
             for(u64 i = 0; i < block_ast->statements.count; ++i)
             {
-                b = create_scope_metadata(ctx, func, IDENT_DECL, block_scope, i, block_ast->statements[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_REFERENCE, block_scope, i, block_ast->statements[i]);
             }
         } break;
         case AST_Type::while_ast: {
             While_AST *while_ast = static_cast<While_AST*>(ast);
-            b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, while_ast->guard);
-            return_if_failed;
-            return create_scope_metadata(ctx, func, IDENT_DECL, scope, scope_index, while_ast->body);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, while_ast->guard);
+            create_scope_metadata(ctx, func, IDENT_DECL, scope, scope_index, while_ast->body);
         } break;
         case AST_Type::for_ast: {
             For_AST *for_ast = static_cast<For_AST*>(ast);
@@ -143,42 +135,35 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
             Hashed_Scope *for_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
             init_hashed_scope(for_scope, scope, scope_index, 4);
             
-            b = create_scope_metadata(ctx, func, IDENT_LOOP_VAR, for_scope, 0, for_ast->induction_var);
-            return_if_failed;
+            create_scope_metadata(ctx, func, IDENT_LOOP_VAR, for_scope, 0, for_ast->induction_var);
+            
             if(for_ast->flags & FOR_FLAG_OVER_ARRAY)
             {
-                b = create_scope_metadata(ctx, func, IDENT_LOOP_VAR, for_scope, 0, for_ast->index_var);
-                return_if_failed;
-                b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, for_ast->array_expr);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_LOOP_VAR, for_scope, 0, for_ast->index_var);
+                create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, for_ast->array_expr);
             }
             else
             {
-                b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, for_ast->low_expr);
-                return_if_failed;
-                b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, for_ast->high_expr);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, for_ast->low_expr);
+                create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, for_ast->high_expr);
             }
-            return create_scope_metadata(ctx, func, IDENT_DECL, for_scope, 1, for_ast->body);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, for_scope, 1, for_ast->body);
         } break;
         case AST_Type::if_ast: {
             If_AST *if_ast = static_cast<If_AST*>(ast);
-            b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, if_ast->guard);
-            return_if_failed;
-            b = create_scope_metadata(ctx, func, IDENT_DECL, scope, scope_index, if_ast->then_block);
-            return_if_failed;
-            return create_scope_metadata(ctx, func, IDENT_DECL, scope, scope_index, if_ast->else_block);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, if_ast->guard);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, if_ast->then_block);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, if_ast->else_block);
         } break;
         case AST_Type::assign_ast: {
             Assign_AST *assign_ast = static_cast<Assign_AST*>(ast);
-            b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, assign_ast->lhs);
-            return_if_failed;
-            return create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, assign_ast->rhs);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, assign_ast->lhs);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, assign_ast->rhs);
         } break;
         case AST_Type::return_ast: {
             Return_AST *return_ast = static_cast<Return_AST*>(ast);
             return_ast->function = func;
-            return create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, return_ast->expr);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, return_ast->expr);
         } break;
         case AST_Type::ident_ast: {
             Ident_AST *ident_ast = static_cast<Ident_AST*>(ast);
@@ -204,7 +189,7 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
                     Expr_AST *prev = scope_find(scope, atom, scope_index);
                     assert(prev);
                     print_err("Error: %d:%d: Redeclared identifier '%.*s'\nPrevious declaration at %d:%d\n", ident_ast->line_number, ident_ast->line_offset, str.count, str.data, prev->line_number, prev->line_offset);
-                    return false;
+                    ctx->success = false;
                 }
             }
         } break;
@@ -212,13 +197,11 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
             Function_Type_AST *function_type_ast = static_cast<Function_Type_AST*>(ast);
             for(u64 i = 0; i < function_type_ast->parameter_types.count; ++i)
             {
-                b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, function_type_ast->parameter_types[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, function_type_ast->parameter_types[i]);
             }
             for(u64 i = 0; i < function_type_ast->return_types.count; ++i)
             {
-                b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, function_type_ast->return_types[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, function_type_ast->return_types[i]);
             }
         } break;
         case AST_Type::function_ast: {
@@ -227,29 +210,26 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
             Hashed_Scope *func_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
             init_hashed_scope(func_scope, scope, scope_index, 8);
             
-            b = create_scope_metadata(ctx, function_ast, IDENT_REFERENCE, func_scope, 0, function_ast->prototype);
-            return_if_failed;
+            create_scope_metadata(ctx, function_ast, IDENT_REFERENCE, func_scope, 0, function_ast->prototype);
+            
             for(u64 i = 0; i < function_ast->param_names.count; ++i)
             {
-                b = create_scope_metadata(ctx, function_ast, IDENT_PARAM, func_scope, 0, function_ast->param_names[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, function_ast, IDENT_PARAM, func_scope, 0, function_ast->param_names[i]);
             }
             for(u64 i = 0; i < function_ast->default_values.count; ++i)
             {
-                b = create_scope_metadata(ctx, function_ast, IDENT_REFERENCE, func_scope, 1, function_ast->default_values[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, function_ast, IDENT_REFERENCE, func_scope, 1, function_ast->default_values[i]);
             }
-            return create_scope_metadata(ctx, function_ast, IDENT_DECL, func_scope, 2, function_ast->block);
+            create_scope_metadata(ctx, function_ast, IDENT_REFERENCE, func_scope, 2, function_ast->block);
         } break;
         case AST_Type::function_call_ast: {
             Function_Call_AST *function_call_ast = static_cast<Function_Call_AST*>(ast);
             
-            b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, function_call_ast->function);
-            return_if_failed;
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, function_call_ast->function);
+            
             for(u64 i = 0; i < function_call_ast->args.count; ++i)
             {
-                b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, function_call_ast->args[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, function_call_ast->args[i]);
             }
         } break;
         case AST_Type::access_ast: {
@@ -258,13 +238,13 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
             String str = access_ast->ident;
             Atom atom = atomize_string(ctx->atom_table, str);
             access_ast->atom = atom;
-            return create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, access_ast->lhs);
+            access_ast->expr = nullptr;
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, access_ast->lhs);
         } break;
         case AST_Type::binary_operator_ast: {
             Binary_Operator_AST *binop_ast = static_cast<Binary_Operator_AST*>(ast);
-            b = create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, binop_ast->lhs);
-            return_if_failed;
-            return create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, binop_ast->rhs);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, binop_ast->lhs);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, binop_ast->rhs);
         } break;
         case AST_Type::enum_ast: {
             Enum_AST *enum_ast = static_cast<Enum_AST*>(ast);
@@ -275,9 +255,9 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
             for(u64 i = 0; i < enum_ast->values.count; ++i)
             {
                 // TODO: is IDENT_DECL best for this?
-                b = create_scope_metadata(ctx, func, IDENT_DECL, values_scope, 0, enum_ast->values[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_REFERENCE, values_scope, 0, enum_ast->values[i]);
             }
+            enum_ast->scope = values_scope;
         } break;
         case AST_Type::struct_ast: {
             Struct_AST *struct_ast = static_cast<Struct_AST*>(ast);
@@ -289,18 +269,18 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
             
             for(u64 i = 0; i < struct_ast->constants.count; ++i)
             {
-                b = create_scope_metadata(ctx, func, IDENT_DECL, constants_scope, 0, struct_ast->constants[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_DECL, constants_scope, 0, struct_ast->constants[i]);
             }
             for(u64 i = 0; i < struct_ast->fields.count; ++i)
             {
-                b = create_scope_metadata(ctx, func, IDENT_FIELD, fields_scope, 0, struct_ast->fields[i]);
-                return_if_failed;
+                create_scope_metadata(ctx, func, IDENT_FIELD, fields_scope, 0, struct_ast->fields[i]);
             }
+            struct_ast->constant_scope = constants_scope;
+            struct_ast->field_scope = fields_scope;
         } break;
         case AST_Type::unary_ast: {
             Unary_Operator_AST *unop_ast = static_cast<Unary_Operator_AST*>(ast);
-            return  create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, unop_ast->operand);
+            create_scope_metadata(ctx, func, IDENT_REFERENCE, scope, scope_index, unop_ast->operand);
         } break;
         case AST_Type::number_ast:
         case AST_Type::primitive_ast:
@@ -309,20 +289,18 @@ bool create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
             // Do nothing
         } break;
     }
-    return true;
 }
 
 bool create_scope_metadata(Scoping_Context *ctx, Array<Decl_AST*> decls)
 {
+    ctx->success = true;
+    
     Hashed_Scope *file_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
     init_hashed_scope(file_scope, nullptr, 0, 16);
     
     for(u64 i = 0; i < decls.count; ++i)
     {
-        if(!create_scope_metadata(ctx, nullptr, IDENT_DECL, file_scope, 0, decls[i]))
-        {
-            return false;
-        }
+        create_scope_metadata(ctx, nullptr, IDENT_DECL, file_scope, 0, decls[i]);
     }
-    return true;
+    return ctx->success;
 }

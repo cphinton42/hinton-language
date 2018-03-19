@@ -30,41 +30,49 @@ enum class AST_Type : u16
     bool_ast,
 };
 
-bool ast_type_is_expr[] = {
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
+const char *ast_type_names[] = {
+    "decl",
+    "block",
+    "while",
+    "for",
+    "if",
+    "assign",
+    "return",
+    
+    "ident",
+    "function_type",
+    "function",
+    "function_call",
+    "access",
+    "binary_operator",
+    "number",
+    "enum",
+    "struct",
+    "unary",
+    "primitive",
+    "string",
+    "bool",
 };
 
 
-constexpr u16 AST_FLAG_SYNTHETIC = 1;
-constexpr u16 AST_FLAG_TYPE_INFERRED_TRANSITIVE = 2;
+constexpr u16 AST_FLAG_SYNTHETIC = 0x1;
+constexpr u16 AST_FLAG_CHECK_COMPLETE = 0x2;
 
-constexpr u16 DECL_FLAG_CONSTANT = 4;
+constexpr u16 DECL_FLAG_CONSTANT = 0x4;
 
-constexpr u16 FOR_FLAG_BY_POINTER = 4;
-constexpr u16 FOR_FLAG_OVER_ARRAY = 8;
+constexpr u16 FOR_FLAG_BY_POINTER = 0x4;
+constexpr u16 FOR_FLAG_OVER_ARRAY = 0x8;
 
-constexpr u16 EXPR_FLAG_CONSTANT = 4;
-constexpr u16 EXPR_FLAG_COMPILE_TIME_CONSTANT = 8;
-constexpr u16 TYPE_FLAG_CANONICAL = 16; // TODO: is this needed?
-constexpr u16 NUMBER_FLAG_FLOATLIKE = 16;
+constexpr u16 EXPR_FLAG_CONSTANT = 0x4;
+constexpr u16 EXPR_FLAG_COMPILE_TIME_CONSTANT = 0x8;
+constexpr u16 EXPR_FLAG_LVALUE = 0x10;
+constexpr u16 EXPR_FLAG_NOT_LVALUE = 0x20;
+constexpr u16 EXPR_FLAG_LVALUE_MASK = 0x30;
+constexpr u16 NUMBER_FLAG_FLOATLIKE = 0x40;
+constexpr u16 TYPE_FLAG_EVALUATED = 0x40;
+constexpr u16 TYPE_FLAG_CANONICAL = 0x80; // TODO: is this needed?
+
+
 
 struct AST
 {
@@ -300,7 +308,11 @@ struct Access_AST : Expr_AST
     union
     {
         String ident;
-        Atom atom;
+        struct
+        {
+            Atom atom;
+            Expr_AST *expr;
+        };
     };
 };
 
@@ -393,6 +405,8 @@ struct Struct_AST : Expr_AST
     
     Array<Decl_AST*> constants;
     Array<Decl_AST*> fields;
+    Hashed_Scope *constant_scope;
+    Hashed_Scope *field_scope;
 };
 
 struct Enum_AST : Expr_AST
@@ -400,6 +414,7 @@ struct Enum_AST : Expr_AST
     static constexpr AST_Type type_value = AST_Type::enum_ast;
     
     Array<Decl_AST*> values;
+    Hashed_Scope *scope;
 };
 
 enum class Assign_Operator : u64

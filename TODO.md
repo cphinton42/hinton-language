@@ -3,9 +3,10 @@
 ### Immediate TODO's
 
  - Type checking - the exploration is real
+ - Integers of smaller sizes don't seem to work
+ - Enum values need to have the same type, and the value can be left out
+ - Improve error messages!!!
  - Figure out the situation with different types of identifiers
-   It would be good to have a level of indirection so that declarations can be changed in one place
-   Probably make a scope structure alongside the AST structure
  - What's the overloading situation? Complicated by planned ability to inject code into global/module scope
  - Structs and enums should not capture variable identifiers from local scope
  - Code gen
@@ -22,8 +23,6 @@
  - Default arguments can use other arguments.
    This needs to be checked for circular definitions.
    Polymorphism will also require this
- - Need to check for illegal double declarations
-   Overloading and shadowing will be ok, but not double declaration in a single scope
  - Operator typechecking will be totally different once overloading is added
  - Deduplicating types
    pros:
@@ -97,3 +96,54 @@
    The problem with bool1 is: how would it interact with code that uses size_of e.g. allocators.
    Similar to SOA: the size of multiple things is smaller than the size of 1 thing multiplied by the number of things
  - for-else like python. Use case: instead of loop, set flag and break, check flag
+ - no overloading, except using overload keyword. Require a placeholder
+   Except overloading is a form of polymorphism, want it to be open rather than closed
+ - python-like generators. Need to be type-safe though, generator structs need to be accessible
+   Perhaps #generator takes a function which can yield, and produces a function and a type, after multiple return values is implemented
+ - The ability to return l-values is probably good...
+   What are the real disadvantages of references? -- intent, null, reassign space
+   If assignment can be overridden, it is possible to implement in userland
+   override assignment probably needed to implement relative pointers, etc by user
+
+
+# lvalue/rvalue
+
+It seems like passing lvalues would be useful, at least for implementing new kinds of storage mechanisms (SOA, relative pointer, etc)
+However, I dislike references in C++, pointers are nice and explicit.
+Note: this interacts with the aliasing situation
+
+Implementation-wise
+ - lvalues are pointers, auto-dereference
+ - else in registers
+
+ - memory    - can take address, or lift into registers
+ - registers - can spill and take address
+
+
+pointers/arrays
+ - an rvalue that can be converted to an lvalue
+ - conversely, you can only take the address of lvalues
+
+spill rvalue to take address
+lift lvalue into registers
+
+pass-by-value
+ - storage is ambiguous, can potentially be put into registers
+ - copy-semantics, that is, changes will not affect original source
+
+void blah() {
+
+  // storage on stack, lvalue is pointer
+  // Or storage in registers, lvalue refers to registers
+  Thing t;
+
+  t.blah; // could be register, or pointer
+
+  // storage on stack, lvalue is pointer
+  Thing &t = *stack_alloc(Thing, 1);
+
+  t.blah; // pointer
+}
+
+// Some lvalues may be optimized into registers,
+// But the only way to consistently pass/return lvalues is using pointers

@@ -1641,7 +1641,10 @@ Decl_AST *parse_decl(Parsing_Context *ctx, Token **current_ptr, Decl_Type decl_t
         
         if(is_constant)
         {
+            // TODO: is this the place to do this?
             result->flags |= DECL_FLAG_CONSTANT;
+            result->ident.flags |= EXPR_FLAG_CONSTANT;
+            
         }
     }
     else
