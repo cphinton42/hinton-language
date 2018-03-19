@@ -12,14 +12,6 @@
  - Code gen
 
 ### Notes
- - Probably need to differentiate the concept of typechecking
-   - local matching of types
-   - constraints by directives, constant checking, etc.
-   - transitivity
- - Differentiate synthetic flag: polymorphic, inferred, internal, computed
- - Declarations introduce a new scope for recursion's sake.
-   Doesn't make much sense when declaring a struct's field or enum value though
-   Typechecking might take care of that?
  - Default arguments can use other arguments.
    This needs to be checked for circular definitions.
    Polymorphism will also require this
@@ -35,7 +27,6 @@
 
  - Create general allocator interface (? maybe just make it more uniform ?)
    For example, to supply to array_add
- - Make an array_trim
  - Allow suffixes on number literals for more control without requiring more type annotations (f and u for float and unsigned)
  - Cleanup memory leaks in parsing
  - Put newline on errors at the end of file that doesn't end in a newline
@@ -108,42 +99,41 @@
 
 # lvalue/rvalue
 
-It seems like passing lvalues would be useful, at least for implementing new kinds of storage mechanisms (SOA, relative pointer, etc)
-However, I dislike references in C++, pointers are nice and explicit.
-Note: this interacts with the aliasing situation
+It seems like passing lvalues would be useful, at least for implementing new kinds of storage mechanisms (SOA, relative pointer, etc)  
+However, I dislike references in C++, pointers are nice and explicit.  
+Note: this interacts with the aliasing situation  
 
-Implementation-wise
+###### Implementation-wise  
  - lvalues are pointers, auto-dereference
  - else in registers
-
  - memory    - can take address, or lift into registers
  - registers - can spill and take address
 
 
-pointers/arrays
+###### pointers/arrays  
  - an rvalue that can be converted to an lvalue
  - conversely, you can only take the address of lvalues
 
-spill rvalue to take address
-lift lvalue into registers
+spill rvalue to take address  
+lift lvalue into registers  
 
-pass-by-value
+pass-by-value  
  - storage is ambiguous, can potentially be put into registers
  - copy-semantics, that is, changes will not affect original source
 
-void blah() {
+>    void blah() {
+>    
+>      // storage on stack, lvalue is pointer
+>      // Or storage in registers, lvalue refers to registers
+>      Thing t;
+>    
+>      t.blah; // could be register, or pointer
+>    
+>      // storage on stack, lvalue is pointer
+>      Thing &t = *stack_alloc(Thing, 1);
+>    
+>      t.blah; // pointer
+>    }
 
-  // storage on stack, lvalue is pointer
-  // Or storage in registers, lvalue refers to registers
-  Thing t;
-
-  t.blah; // could be register, or pointer
-
-  // storage on stack, lvalue is pointer
-  Thing &t = *stack_alloc(Thing, 1);
-
-  t.blah; // pointer
-}
-
-// Some lvalues may be optimized into registers,
-// But the only way to consistently pass/return lvalues is using pointers
+// Some lvalues may be optimized into registers,  
+// But the only way to consistently pass/return lvalues is using pointers  
