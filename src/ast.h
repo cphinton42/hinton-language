@@ -87,8 +87,13 @@ u32 next_serial = 0;
 
 struct Expr_AST : AST
 {
-    Expr_AST *resolved_type;
-    Expr_AST *canonical_form;
+    union {
+        Array<Expr_AST*> types;
+        struct {
+            u64 types_count;
+            Expr_AST *resolved_type;
+        };
+    };
 };
 
 constexpr u64 PRIM_NO_SIZE = 0;
@@ -183,10 +188,57 @@ Primitive_AST f32_t_ast;
 Primitive_AST f64_t_ast;
 Primitive_AST void_t_ast;
 Primitive_AST type_t_ast;
-Primitive_AST intlike_t_ast;
+
+// TODO: remove these
+Primitive_AST intlike_t_ast; 
 Primitive_AST floatlike_t_ast;
 Primitive_AST numberlike_t_ast;
 Primitive_AST boollike_t_ast;
+
+declare_static_array(Expr_AST*, number_type_asts, 10) = {
+    &u8_t_ast,
+    &u16_t_ast,
+    &u32_t_ast,
+    &u64_t_ast,
+    &s8_t_ast,
+    &s16_t_ast,
+    &s32_t_ast,
+    &s64_t_ast,
+    &f32_t_ast,
+    &f64_t_ast,
+};
+declare_static_array(Expr_AST*, int_type_asts, 8) = {
+    &u8_t_ast,
+    &u16_t_ast,
+    &u32_t_ast,
+    &u64_t_ast,
+    &s8_t_ast,
+    &s16_t_ast,
+    &s32_t_ast,
+    &s64_t_ast,
+};
+declare_static_array(Expr_AST*, sint_type_asts, 4) = {
+    &s8_t_ast,
+    &s16_t_ast,
+    &s32_t_ast,
+    &s64_t_ast,
+};
+declare_static_array(Expr_AST*, uint_type_asts, 4) = {
+    &u8_t_ast,
+    &u16_t_ast,
+    &u32_t_ast,
+    &u64_t_ast,
+};
+declare_static_array(Expr_AST*, float_type_asts, 2) = {
+    &f32_t_ast,
+    &f64_t_ast,
+};
+declare_static_array(Expr_AST*, bool_type_asts, 4) = {
+    &bool8_t_ast,
+    &bool16_t_ast,
+    &bool32_t_ast,
+    &bool64_t_ast,
+};
 
 constexpr u64 IDENT_UNKNOWN = 0;
 constexpr u64 IDENT_REFERENCE = 1;
@@ -200,11 +252,9 @@ struct Ident_AST : Expr_AST
 {
     static constexpr AST_Type type_value = AST_Type::ident_ast;
     
-    union
-    {
+    union {
         String ident;
-        struct
-        {
+        struct {
             Atom atom;
             u64 tagged_expr_ptr;
         };
@@ -278,8 +328,7 @@ struct Number_AST : Expr_AST
     static constexpr AST_Type type_value = AST_Type::number_ast;
     
     String literal;
-    union
-    {
+    union {
         u64 int_value;
         f64 float_value;
     };
@@ -305,11 +354,9 @@ struct Access_AST : Expr_AST
     static constexpr AST_Type type_value = AST_Type::access_ast;
     
     Expr_AST *lhs;
-    union
-    {
+    union {
         String ident;
-        struct
-        {
+        struct {
             Atom atom;
             Expr_AST *expr;
         };
@@ -374,15 +421,12 @@ struct For_AST : AST
     static constexpr AST_Type type_value = AST_Type::for_ast;
     
     Ident_AST *induction_var;
-    union
-    {
-        struct
-        {
+    union {
+        struct {
             Ident_AST *index_var;
             Expr_AST *array_expr;
         };
-        struct
-        {
+        struct {
             Expr_AST *low_expr;
             Expr_AST *high_expr;
         };
@@ -484,7 +528,7 @@ void print_dot(Print_Buffer *pb, Array<Decl_AST*> decls);
 AST* construct_ast_(AST *new_ast, AST_Type type, u64 line_number, u64 line_offset);
 
 #define construct_ast(pool, type, line_number, line_offset) \
-(static_cast<type*>(construct_ast_(pool_alloc(type,(pool),1),type::type_value, (line_number), (line_offset))))
+(static_cast<type*>(construct_ast_(pool_alloc3(type,1,pool),type::type_value, (line_number), (line_offset))))
 
 
 #define case_non_exprs \

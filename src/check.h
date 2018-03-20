@@ -14,10 +14,8 @@ struct Job
 {
     Job_Type type;
     u32 stage;
-    union
-    {
-        struct
-        {
+    union {
+        struct {
             Expr_AST *type;
             AST *ast;
         } typecheck;

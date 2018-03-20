@@ -10,6 +10,7 @@
 #include "stb/stb_sprintf.h"
 
 #include "ast.cpp"
+#include "basic.cpp"
 #include "check.cpp"
 #include "io.cpp"
 #include "lex.cpp"

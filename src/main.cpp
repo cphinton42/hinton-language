@@ -270,7 +270,7 @@ int main(int argc, char **argv)
     Pool_Allocator ast_pool;
     Parsing_Context ctx;
     
-    init_pool(&ast_pool, 4096);
+    pool_init(&ast_pool, 4096);
     init_parsing_context(&ctx, file_contents, tokens.array, &ast_pool);
     Dynamic_Array<Decl_AST*> decls = parse_tokens(&ctx);
     

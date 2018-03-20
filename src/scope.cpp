@@ -68,7 +68,7 @@ Expr_AST *scope_find(Hashed_Scope *hs, Atom key, u64 scope_index, u64 hash, bool
 void init_atom_table(Atom_Table *at, u64 initial_set_size, u64 block_size)
 {
     init_hash_set(&at->atom_set, initial_set_size);
-    init_pool(&at->atom_pool, block_size);
+    pool_init(&at->atom_pool, block_size);
 }
 
 Atom atomize_string(Atom_Table *at, String str)
@@ -78,10 +78,10 @@ Atom atomize_string(Atom_Table *at, String str)
     u64 slot = set_find_slot(&at->atom_set, str, hash);
     if(at->atom_set.hashes[slot] == 0)
     {
-        String *new_str = pool_alloc(String, &at->atom_pool, 1);
+        String *new_str = pool_alloc(String, &at->atom_pool);
         assert(new_str);
         new_str->count = str.count;
-        new_str->data = pool_alloc(byte, &at->atom_pool, str.count);
+        new_str->data = pool_alloc(byte, str.count, &at->atom_pool);
         copy_memory(new_str->data, str.data, str.count);
         
         Atom result = {new_str};
@@ -116,7 +116,7 @@ void create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
         case AST_Type::block_ast: {
             Block_AST *block_ast = static_cast<Block_AST*>(ast);
             
-            Hashed_Scope *block_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
+            Hashed_Scope *block_scope = pool_alloc(Hashed_Scope, ctx->ast_pool);
             init_hashed_scope(block_scope, scope, scope_index, 8);
             
             for(u64 i = 0; i < block_ast->statements.count; ++i)
@@ -132,7 +132,7 @@ void create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
         case AST_Type::for_ast: {
             For_AST *for_ast = static_cast<For_AST*>(ast);
             
-            Hashed_Scope *for_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
+            Hashed_Scope *for_scope = pool_alloc(Hashed_Scope, ctx->ast_pool);
             init_hashed_scope(for_scope, scope, scope_index, 4);
             
             create_scope_metadata(ctx, func, IDENT_LOOP_VAR, for_scope, 0, for_ast->induction_var);
@@ -207,7 +207,7 @@ void create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
         case AST_Type::function_ast: {
             Function_AST *function_ast = static_cast<Function_AST*>(ast);
             
-            Hashed_Scope *func_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
+            Hashed_Scope *func_scope = pool_alloc(Hashed_Scope, ctx->ast_pool);
             init_hashed_scope(func_scope, scope, scope_index, 8);
             
             create_scope_metadata(ctx, function_ast, IDENT_REFERENCE, func_scope, 0, function_ast->prototype);
@@ -249,7 +249,7 @@ void create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
         case AST_Type::enum_ast: {
             Enum_AST *enum_ast = static_cast<Enum_AST*>(ast);
             
-            Hashed_Scope *values_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
+            Hashed_Scope *values_scope = pool_alloc(Hashed_Scope, ctx->ast_pool);
             init_hashed_scope(values_scope, scope, scope_index, 8);
             
             for(u64 i = 0; i < enum_ast->values.count; ++i)
@@ -262,9 +262,9 @@ void create_scope_metadata(Scoping_Context *ctx, Function_AST *func, u64 type, H
         case AST_Type::struct_ast: {
             Struct_AST *struct_ast = static_cast<Struct_AST*>(ast);
             
-            Hashed_Scope *constants_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
+            Hashed_Scope *constants_scope = pool_alloc(Hashed_Scope, ctx->ast_pool);
             init_hashed_scope(constants_scope, scope, scope_index, 8);
-            Hashed_Scope *fields_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
+            Hashed_Scope *fields_scope = pool_alloc(Hashed_Scope, ctx->ast_pool);
             init_hashed_scope(fields_scope, constants_scope, 0, 8);
             
             for(u64 i = 0; i < struct_ast->constants.count; ++i)
@@ -295,7 +295,7 @@ bool create_scope_metadata(Scoping_Context *ctx, Array<Decl_AST*> decls)
 {
     ctx->success = true;
     
-    Hashed_Scope *file_scope = pool_alloc(Hashed_Scope, ctx->ast_pool, 1);
+    Hashed_Scope *file_scope = pool_alloc(Hashed_Scope, ctx->ast_pool);
     init_hashed_scope(file_scope, nullptr, 0, 16);
     
     for(u64 i = 0; i < decls.count; ++i)

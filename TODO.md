@@ -33,11 +33,11 @@
  - Other escape sequences in strings (such as \UXXXXXX)
  - Improve error reporting
  - break keyword
+ - change for to use ;, so that you can give the induction variable an explicit type
 
 ### Needed to be a serious language
 
  - Polymorphism
-   - Scopes may need to change a bit
  - FFI
  - intrinsics
 
@@ -50,12 +50,16 @@
  - struct literals
  - default initialization
  - cast/transmute
- - size_of, type_of, etc.
+ - size_of, allow overloading?, but first argument must be a type  
+   (Take integer argument, since the size of multiple values together may be smaller than separate (SOA,bool1))
+ - type_of
  - defer
  - goto - yes, really
 
 ### Ideas
 
+ - Mid-development, implement relative, tagged pointers, SOA, bool1 in compiler  
+   That will probably give some insight into how to implement by metaprogramming
  - Group types of AST's in memory? e.g. maybe all identifiers, or all declarations?
  - Calling convention abstraction
  - Stack inspection
@@ -66,6 +70,7 @@
  - Manual aliasing annotations
  - C# style properties...
    I'm somewhat hesitant, but they could be used to implement tagged pointers, relative pointers, SOA at user level (along with #text)
+   After more consideration, those features at user level would probably need a more complicated lvalue/reference system to do adequately and consistently
    Also, arrays that share a count (backing fields share count)
  - Custom casts - probably only explicit?
    what advantage does an explicit cast have over a function call?
@@ -95,7 +100,11 @@
    What are the real disadvantages of references? -- intent, null, reassign space
    If assignment can be overridden, it is possible to implement in userland
    override assignment probably needed to implement relative pointers, etc by user
-
+ - Type vs general expression contexts, #type. This solves the e.g. &Type issue
+ - "template specializations" when a compile-time constant parameter takes a particular value e.g.:  
+>   #operator size_of($t : Type, n : u64 = 1) -> u64
+>   #operator size_of($t==bool1 : Type, n : u64 = 1) -> u64
+ - Note: the above might not be the best way to handle that particular situation though...
 
 # lvalue/rvalue
 

@@ -72,11 +72,6 @@ bool do_typecheck_job(Context *ctx, Job job)
     Expr_AST *type = job.typecheck.type;
     AST *ast = job.typecheck.ast;
     
-    if(type)
-    {
-        assert(type->resolved_type == &type_t_ast);
-    }
-    
     switch(ast->type)
     {
         case AST_Type::decl_ast: {

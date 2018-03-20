@@ -106,27 +106,6 @@ void init_primitive_types()
     numberlike_t_ast.resolved_type = &type_t_ast;
     boollike_t_ast.resolved_type = &type_t_ast;
     
-    u8_t_ast.canonical_form = &u8_t_ast;
-    u16_t_ast.canonical_form = &u16_t_ast;
-    u32_t_ast.canonical_form = &u32_t_ast;
-    u64_t_ast.canonical_form = &u64_t_ast;
-    s8_t_ast.canonical_form = &s8_t_ast;
-    s16_t_ast.canonical_form = &s16_t_ast;
-    s32_t_ast.canonical_form = &s32_t_ast;
-    s64_t_ast.canonical_form = &s64_t_ast;
-    bool8_t_ast.canonical_form = &bool8_t_ast;
-    bool16_t_ast.canonical_form = &bool16_t_ast;
-    bool32_t_ast.canonical_form = &bool32_t_ast;
-    bool64_t_ast.canonical_form = &bool64_t_ast;
-    f32_t_ast.canonical_form = &f32_t_ast;
-    f64_t_ast.canonical_form = &f64_t_ast;
-    void_t_ast.canonical_form = &void_t_ast;
-    type_t_ast.canonical_form = &type_t_ast;
-    intlike_t_ast.canonical_form = &intlike_t_ast;
-    floatlike_t_ast.canonical_form = &floatlike_t_ast;
-    numberlike_t_ast.canonical_form = &numberlike_t_ast;
-    boollike_t_ast.canonical_form = &boollike_t_ast;
-    
     u8_t_ast.primitive = PRIM_U8;
     u16_t_ast.primitive = PRIM_U16;
     u32_t_ast.primitive = PRIM_U32;

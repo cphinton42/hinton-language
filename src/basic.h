@@ -48,21 +48,70 @@ copy_memory_((dest), (src), (count)*sizeof(decltype(*(dest))))
 #define fill_memory(ptr, val, count) \
 fill_memory_((ptr), (val), (count)*sizeof(decltype(*(ptr))))
 
-internal inline void zero_memory_(void *ptr, u64 size);
-internal inline void copy_memory_(void *dest, void *src, u64 size);
-internal inline void fill_memory_(void *dest, u8 value, u64 size);
+inline void zero_memory_(void *ptr, u64 size);
+inline void copy_memory_(void *dest, void *src, u64 size);
+inline void fill_memory_(void *dest, u8 value, u64 size);
+
+// Note: reset/release all is useful, but not really usable in generic context(?)
+enum class Allocator_Mode
+{
+    alloc,
+    resize,
+    dealloc
+};
+
+typedef void*(*Allocator_Function)(void *data, Allocator_Mode mode, void *old_ptr, u64 old_size, u64 new_size);
+
+struct Allocator {
+    Allocator_Function function;
+    void *data;
+};
+
+#ifndef USE_DEBUG_MEMORY_PATTERN
+#define USE_DEBUG_MEMORY_PATTERN 1
+#endif
+#ifndef MEMORY_PATTERN
+#define MEMORY_PATTERN 0xCC
+#endif
+
+void *libc_alloc_func(void *data, Allocator_Mode mode, void *old_ptr, u64 old_size, u64 new_size);
+
+Allocator libc_allocator = {libc_alloc_func, nullptr};
 
 // Allocation functions (to be replaced ?)
-#define mem_alloc(type, n) \
-((type*)mem_alloc_((n)*sizeof(type)))
-#define mem_resize(old_ptr, old_n, new_n) \
-((decltype(old_ptr))mem_resize_((old_ptr), (old_n)*sizeof(decltype(*(old_ptr))), (new_n)*sizeof(decltype(*(old_ptr)))))
-#define mem_dealloc(ptr, n) \
-(mem_dealloc_(ptr, (n)*sizeof(decltype(*(ptr)))))
+#define GET_MACRO(_1,_2,_3,_4,NAME,...) NAME
+#define mem_alloc(...) \
+GET_MACRO(__VA_ARGS__,dummy,mem_alloc3,mem_alloc2,mem_alloc1)(__VA_ARGS__)
+#define mem_resize(...) \
+GET_MACRO(__VA_ARGS__,mem_resize4,mem_resize3)(__VA_ARGS__)
+#define mem_dealloc(...) \
+GET_MACRO(__VA_ARGS__,dummy,mem_dealloc3,mem_dealloc2,mem_dealloc1)(__VA_ARGS__)
 
-internal inline void *mem_alloc_(u64 size);
-internal inline void *mem_resize_(void *old_ptr, u64 old_size, u64 new_size);
-internal inline void mem_dealloc_(void *ptr, u64 size);
+#define mem_alloc1(type) \
+mem_alloc3(type,1,libc_allocator)
+#define mem_alloc2(type, n) \
+mem_alloc3(type,n,libc_allocator)
+#define mem_alloc3(type, n, a) \
+((type*)mem_alloc_((n)*sizeof(type),(a)))
+
+#define mem_resize3(old_ptr, old_n, new_n) \
+mem_resize4(old_ptr,old_n,new_n,libc_allocator)
+#define mem_resize4(old_ptr, old_n, new_n, a) \
+((decltype(old_ptr))mem_resize_((old_ptr), (old_n)*sizeof(decltype(*(old_ptr))), (new_n)*sizeof(decltype(*(old_ptr))),(a)))
+
+#define mem_dealloc1(ptr) \
+mem_dealloc3(ptr,1,libc_allocator)
+#define mem_dealloc2(ptr, n) \
+mem_dealloc3(ptr,n,libc_allocator)
+#define mem_dealloc3(ptr, n, a) \
+(mem_dealloc_(ptr, (n)*sizeof(decltype(*(ptr))),(a)))
+
+inline
+void *mem_alloc_(u64 size, Allocator a);
+inline
+void *mem_resize_(void *old_ptr, u64 old_n, u64 new_n, Allocator a);
+inline
+void mem_dealloc_(void *old_ptr, u64 old_n, Allocator a);
 
 template<typename T>
 T max(T t1, T t2);
@@ -74,11 +123,9 @@ auto ANONYMOUS_VARIABLE(DEFER_TO_EXIT) = Defer_To_Exit() + [&]()
 template <typename T>
 struct Dynamic_Array
 {
-    union
-    {
+    union {
         Array<T> array;
-        struct
-        {
+        struct {
             u64 count;
             T *data;
         };
@@ -110,6 +157,16 @@ void array_trim(Dynamic_Array<T> *arr);
 #define static_array_size(arr) \
 (sizeof((arr)) / sizeof(decltype((arr)[0])))
 
+// Note: Declares an Array<T> with a static T[N].
+// N must be supplied manually, there will be an error if it is too small
+#define declare_static_array(type, name,num) \
+declare_static_array_(type,name,num,CONCAT(name,_backing_array))
+#define declare_static_array_(type,name,num,arr) \
+extern type arr[]; \
+Array<type> name = make_array(num, arr); \
+type arr[num]
+
+
 #define CONCAT_IMPL(s1,s2) s1##s2
 #define CONCAT(s1,s2) CONCAT_IMPL(s1, s2)
 
@@ -132,30 +189,36 @@ CONCAT(str, __LINE__)
 #include <stdlib.h>
 #include <string.h>
 
-internal inline void zero_memory_(void *ptr, u64 size)
+inline
+void zero_memory_(void *ptr, u64 size)
 {
     memset(ptr, 0, size);
 }
-internal inline void copy_memory_(void *dest, void *src, u64 size)
+inline
+void copy_memory_(void *dest, void *src, u64 size)
 {
     memcpy(dest, src, size);
 }
-internal inline void fill_memory_(void *dest, u8 value, u64 size)
+inline
+void fill_memory_(void *dest, u8 value, u64 size)
 {
     memset(dest, value, size);
 }
 
-internal inline void *mem_alloc_(u64 size)
+inline
+void *mem_alloc_(u64 size, Allocator a)
 {
-    return malloc(size);
+    return a.function(a.data, Allocator_Mode::alloc, nullptr, 0, size);
 }
-internal inline void *mem_resize_(void *old_ptr, u64 old_size, u64 new_size)
+inline
+void *mem_resize_(void *old_ptr, u64 old_n, u64 new_n, Allocator a)
 {
-    return realloc(old_ptr, new_size);
+    return a.function(a.data, Allocator_Mode::resize, old_ptr, old_n, new_n);
 }
-internal inline void mem_dealloc_(void *ptr, u64 size)
+inline
+void mem_dealloc_(void *old_ptr, u64 old_n, Allocator a)
 {
-    free(ptr);
+    a.function(a.data, Allocator_Mode::dealloc, old_ptr, old_n, 0);
 }
 
 template<typename T>
