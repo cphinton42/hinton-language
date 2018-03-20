@@ -62,6 +62,7 @@ enum class Allocator_Mode
 
 typedef void*(*Allocator_Function)(void *data, Allocator_Mode mode, void *old_ptr, u64 old_size, u64 new_size);
 
+// I would make it a base class with virtual member functions, but I love POD
 struct Allocator {
     Allocator_Function function;
     void *data;
@@ -74,6 +75,7 @@ struct Allocator {
 void *libc_alloc_func(void *data, Allocator_Mode mode, void *old_ptr, u64 old_size, u64 new_size);
 
 Allocator libc_allocator = {libc_alloc_func, nullptr};
+Allocator default_allocator = libc_allocator;
 
 // Allocation functions (to be replaced ?)
 #define GET_MACRO(_1,_2,_3,_4,NAME,...) NAME
@@ -85,21 +87,21 @@ GET_MACRO(__VA_ARGS__,mem_resize4,mem_resize3)(__VA_ARGS__)
 GET_MACRO(__VA_ARGS__,dummy,mem_dealloc3,mem_dealloc2,mem_dealloc1)(__VA_ARGS__)
 
 #define mem_alloc1(type) \
-mem_alloc3(type,1,libc_allocator)
+mem_alloc3(type,1,default_allocator)
 #define mem_alloc2(type, n) \
-mem_alloc3(type,n,libc_allocator)
+mem_alloc3(type,n,default_allocator)
 #define mem_alloc3(type, n, a) \
 ((type*)mem_alloc_((n)*sizeof(type),(a)))
 
 #define mem_resize3(old_ptr, old_n, new_n) \
-mem_resize4(old_ptr,old_n,new_n,libc_allocator)
+mem_resize4(old_ptr,old_n,new_n,default_allocator)
 #define mem_resize4(old_ptr, old_n, new_n, a) \
 ((decltype(old_ptr))mem_resize_((old_ptr), (old_n)*sizeof(decltype(*(old_ptr))), (new_n)*sizeof(decltype(*(old_ptr))),(a)))
 
 #define mem_dealloc1(ptr) \
-mem_dealloc3(ptr,1,libc_allocator)
+mem_dealloc3(ptr,1,default_allocator)
 #define mem_dealloc2(ptr, n) \
-mem_dealloc3(ptr,n,libc_allocator)
+mem_dealloc3(ptr,n,default_allocator)
 #define mem_dealloc3(ptr, n, a) \
 (mem_dealloc_(ptr, (n)*sizeof(decltype(*(ptr))),(a)))
 
@@ -139,11 +141,14 @@ template<typename T>
 Array<T> make_array(u64 count, T *data);
 
 template<typename T>
-void array_add(Dynamic_Array<T> *arr, T element, Allocator a = libc_allocator);
+void array_add(Dynamic_Array<T> *arr, T element, Allocator a = default_allocator);
 template<typename T>
-void array_resize(Dynamic_Array<T> *arr, u64 new_size, Allocator a = libc_allocator);
+void array_resize(Dynamic_Array<T> *arr, u64 new_size, Allocator a = default_allocator);
 template<typename T>
-void array_trim(Dynamic_Array<T> *arr, Allocator a = libc_allocator);
+void array_trim(Dynamic_Array<T> *arr, Allocator a = default_allocator);
+template<typename T>
+Array<T> array_copy(Array<T> arr, Allocator a = default_allocator);
+
 //
 // Common Macros
 //
@@ -311,6 +316,17 @@ template<typename T>
 void array_trim(Dynamic_Array<T> *arr, Allocator a)
 {
     array_resize(arr, arr->count, a);
+}
+
+template<typename T>
+Array<T> array_copy(Array<T> arr, Allocator a)
+{
+    Array<T> result;
+    result.count = arr.count;
+    result.data = mem_alloc(T, arr.count, a);
+    assert(result.data);
+    copy_memory(result.data, arr.data, arr.count);
+    return result;
 }
 
 template<typename T>
