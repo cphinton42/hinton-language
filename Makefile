@@ -7,7 +7,7 @@ CXX ?= g++
 
 # C++ flags for release and debug builds
 CXXFLAGS.release ?= -g -O3 -march=native -DNDEBUG
-CXXFLAGS.debug   ?= -g -march=native
+CXXFLAGS.debug   ?= -g -DUSE_DEBUG_MEMORY_PATTERN -march=native
 
 CXXFLAGS = -std=c++11 -fno-exceptions -fno-rtti $(CXXFLAGS.$(BUILD))
 LIBS =

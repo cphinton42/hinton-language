@@ -67,9 +67,6 @@ struct Allocator {
     void *data;
 };
 
-#ifndef USE_DEBUG_MEMORY_PATTERN
-#define USE_DEBUG_MEMORY_PATTERN 1
-#endif
 #ifndef MEMORY_PATTERN
 #define MEMORY_PATTERN 0xCC
 #endif

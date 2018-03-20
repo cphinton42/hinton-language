@@ -45,7 +45,7 @@ Block_Header* allocate_block(u64 block_size)
         Block_Header *result = static_cast<Block_Header*>(memory);
         result->next = nullptr;
         result->size = block_size;
-#if USE_DEBUG_MEMORY_PATTERN
+#ifdef USE_DEBUG_MEMORY_PATTERN
         byte *start = result->memory;
         u64 size = block_size - sizeof(Block_Header);
         fill_memory(start, MEMORY_PATTERN, size);
@@ -161,7 +161,7 @@ void *pool_resize_(Pool_Allocator *pool, void *old_ptr, u64 old_size, u64 new_si
         if(new_memory != old_memory)
         {
             copy_memory(new_memory, old_memory, old_size);
-#if USE_DEBUG_MEMORY_PATTERN
+#ifdef USE_DEBUG_MEMORY_PATTERN
             fill_memory(old_memory, MEMORY_PATTERN, old_size);
 #endif
         }
@@ -225,7 +225,7 @@ void pool_reset(Pool_Allocator *pool)
     if(pool->current_block)
     {
         pool->current_point = pool->current_block->memory;
-#if USE_DEBUG_MEMORY_PATTERN
+#ifdef USE_DEBUG_MEMORY_PATTERN
         u64 size = pool->current_end - pool->current_point;
         fill_memory(pool->current_point, MEMORY_PATTERN, size);
 #endif
@@ -236,13 +236,13 @@ void pool_reset(Pool_Allocator *pool)
         
         while(block->next)
         {
-#if USE_DEBUG_MEMORY_PATTERN
+#ifdef USE_DEBUG_MEMORY_PATTERN
             u64 size = block->size - sizeof(Block_Header);
             fill_memory(block->memory, MEMORY_PATTERN, size);
 #endif
             block = block->next;
         }
-#if USE_DEBUG_MEMORY_PATTERN
+#ifdef USE_DEBUG_MEMORY_PATTERN
         u64 size = block->size - sizeof(Block_Header);
         fill_memory(block->memory, MEMORY_PATTERN, size);
 #endif

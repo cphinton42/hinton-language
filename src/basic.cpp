@@ -5,7 +5,7 @@ void *libc_alloc_func(void *data, Allocator_Mode mode, void *old_ptr, u64 old_si
     if(mode == Allocator_Mode::alloc)
     {
         byte *memory = (byte*)malloc(new_size);
-#if USE_DEBUG_MEMORY_PATTERN
+#ifdef USE_DEBUG_MEMORY_PATTERN
         fill_memory(memory, MEMORY_PATTERN, new_size);
 #endif
         return (void*)memory;
@@ -13,7 +13,7 @@ void *libc_alloc_func(void *data, Allocator_Mode mode, void *old_ptr, u64 old_si
     else if(mode == Allocator_Mode::resize)
     {
         byte *memory = (byte*)realloc(old_ptr, new_size);
-#if USE_DEBUG_MEMORY_PATTERN
+#ifdef USE_DEBUG_MEMORY_PATTERN
         if(new_size > old_size)
         {
             byte *start = memory + old_size;

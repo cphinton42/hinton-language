@@ -25,8 +25,6 @@
 
 ### Misc TODO's
 
- - Create general allocator interface (? maybe just make it more uniform ?)
-   For example, to supply to array_add
  - Allow suffixes on number literals for more control without requiring more type annotations (f and u for float and unsigned)
  - Cleanup memory leaks in parsing
  - Put newline on errors at the end of file that doesn't end in a newline
