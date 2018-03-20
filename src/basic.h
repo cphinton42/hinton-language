@@ -142,11 +142,11 @@ template<typename T>
 Array<T> make_array(u64 count, T *data);
 
 template<typename T>
-void array_add(Dynamic_Array<T> *arr, T element);
+void array_add(Dynamic_Array<T> *arr, T element, Allocator a = libc_allocator);
 template<typename T>
-void array_resize(Dynamic_Array<T> *arr, u64 new_size);
+void array_resize(Dynamic_Array<T> *arr, u64 new_size, Allocator a = libc_allocator);
 template<typename T>
-void array_trim(Dynamic_Array<T> *arr);
+void array_trim(Dynamic_Array<T> *arr, Allocator a = libc_allocator);
 //
 // Common Macros
 //
@@ -260,7 +260,7 @@ Array<T> make_array(u64 count, T *data)
 }
 
 template<typename T>
-void array_add(Dynamic_Array<T> *arr, T element)
+void array_add(Dynamic_Array<T> *arr, T element, Allocator a)
 {
     if(arr->count == arr->allocated)
     {
@@ -269,7 +269,7 @@ void array_add(Dynamic_Array<T> *arr, T element)
         {
             new_size = 4;
         }
-        array_resize(arr, new_size);
+        array_resize(arr, new_size, a);
     }
     
     (*arr)[arr->count] = element;
@@ -277,21 +277,21 @@ void array_add(Dynamic_Array<T> *arr, T element)
 }
 
 template<typename T>
-void array_resize(Dynamic_Array<T> *arr, u64 new_size)
+void array_resize(Dynamic_Array<T> *arr, u64 new_size, Allocator a)
 {
     // TODO: take more care with OOM errors?
     if(arr->data)
     {
         if(new_size == 0)
         {
-            mem_dealloc(arr->data, arr->allocated);
+            mem_dealloc(arr->data, arr->allocated, a);
             arr->count = 0;
             arr->data = nullptr;
             arr->allocated = 0;
         }
         else
         {
-            arr->data = mem_resize(arr->data, arr->allocated, new_size);
+            arr->data = mem_resize(arr->data, arr->allocated, new_size, a);
             assert(arr->data);
             arr->allocated = new_size;
             if(arr->count > new_size)
@@ -304,14 +304,17 @@ void array_resize(Dynamic_Array<T> *arr, u64 new_size)
     {
         assert(arr->count == 0);
         
-        arr->data = mem_alloc(T, new_size);
+        arr->data = mem_alloc(T, new_size, a);
         assert(arr->data);
         arr->allocated = new_size;
     }
 }
 
 template<typename T>
-void array_trim(Dynamic_Array<T> *arr) { array_resize(arr, arr->count); }
+void array_trim(Dynamic_Array<T> *arr, Allocator a)
+{
+    array_resize(arr, arr->count, a);
+}
 
 template<typename T>
 T max(T t1, T t2)
