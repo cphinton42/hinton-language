@@ -25,6 +25,8 @@
 
 ### Misc TODO's
 
+ - Add ability to specify an enum's type
+ - Probably separate struct fields and enum values from Decl_AST
  - Allow suffixes on number literals for more control without requiring more type annotations (f and u for float and unsigned)
  - Cleanup memory leaks in parsing
  - Put newline on errors at the end of file that doesn't end in a newline
@@ -64,6 +66,7 @@
  - Stack-like context instead of thread-locals
    (using a dedicated register/additional function parameter)
  - Allocator concept - anything implementing an allocator has aliasing rules
+   - Note: the idea about aliasing obviously breaks if you mess with the allocator
    - built-in stack allocator that uses stack pointer (instead of alloca)
  - Manual aliasing annotations
  - C# style properties...

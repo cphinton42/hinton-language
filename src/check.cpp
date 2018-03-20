@@ -31,6 +31,19 @@ bool do_job(Context *ctx, Job job)
     return false;
 }
 
+
+void set_resolved_type(Expr_AST *expr, Expr_AST *type)
+{
+    expr->types.count = 1;
+    expr->resolved_type = type;
+}
+
+bool type_resolved(Expr_AST *expr)
+{
+    return expr->types.count == 1;
+}
+
+
 internal
 bool typecheck_decl(Context *ctx, u32 stage, Decl_AST *ast);
 internal
@@ -113,7 +126,7 @@ bool do_typecheck_job(Context *ctx, Job job)
             {
                 // TODO: find best type? (change to u64 if out of range for s64?)
                 // If ints can't downcast, it might be a pain for 'it' to be big
-                for_ast->induction_var->resolved_type = &s64_t_ast;
+                set_resolved_type(for_ast->induction_var, &s64_t_ast);
                 
                 auto job = make_typecheck_job(&intlike_t_ast, for_ast->low_expr);
                 do_typecheck_job(ctx, job);
@@ -231,7 +244,7 @@ bool typecheck_decl(Context *ctx, u32 stage, Decl_AST *decl_ast)
         } // fall through
         case 1: {
             new_stage = 1;
-            if(decl_ast->decl_type && !decl_ast->decl_type->resolved_type)
+            if(decl_ast->decl_type && !type_resolved(decl_ast->decl_type))
             {
                 break;
             }
@@ -240,7 +253,7 @@ bool typecheck_decl(Context *ctx, u32 stage, Decl_AST *decl_ast)
                 Expr_AST *type_to_match = nullptr;
                 if(decl_ast->decl_type)
                 {
-                    assert(decl_ast->decl_type->resolved_type);
+                    assert(type_resolved(decl_ast->decl_type));
                     type_to_match = decl_ast->decl_type;
                 }
                 auto job = make_typecheck_job(type_to_match, decl_ast->expr);
@@ -249,7 +262,7 @@ bool typecheck_decl(Context *ctx, u32 stage, Decl_AST *decl_ast)
         } // fall through
         case 2: {
             new_stage = 2;
-            if(decl_ast->expr && !decl_ast->expr->resolved_type)
+            if(decl_ast->expr && !type_resolved(decl_ast->expr))
             {
                 break;
             }
@@ -259,11 +272,11 @@ bool typecheck_decl(Context *ctx, u32 stage, Decl_AST *decl_ast)
             }
             if(decl_ast->decl_type)
             {
-                decl_ast->ident.resolved_type = decl_ast->decl_type;
+                set_resolved_type(&decl_ast->ident, decl_ast->decl_type);
             }
             else if(decl_ast->expr)
             {
-                decl_ast->ident.resolved_type = decl_ast->expr->resolved_type;
+                set_resolved_type(&decl_ast->ident, decl_ast->expr->resolved_type);
             }
             else
             {
@@ -294,12 +307,12 @@ bool typecheck_assign(Context *ctx, u32 stage, Assign_AST *assign_ast)
         } // fall through
         case 1: {
             new_stage = 1;
-            if(!assign_ast->lhs->resolved_type && add_job)
+            if(!type_resolved(assign_ast->lhs) && add_job)
             {
                 auto job = make_typecheck_job(nullptr, assign_ast->lhs);
                 do_typecheck_job(ctx, job);
             }
-            if(!assign_ast->lhs->resolved_type)
+            if(!type_resolved(assign_ast->lhs))
             {
                 break;
             }
@@ -330,12 +343,12 @@ bool typecheck_assign(Context *ctx, u32 stage, Assign_AST *assign_ast)
             switch(assign_ast->assign_type)
             {
                 case Assign_Operator::equal: {
-                    if(!assign_ast->rhs->resolved_type && add_job)
+                    if(!type_resolved(assign_ast->rhs) && add_job)
                     {
                         auto job = make_typecheck_job(assign_ast->lhs->resolved_type, assign_ast->rhs);
                         do_typecheck_job(ctx, job);
                     }
-                    if(!assign_ast->rhs->resolved_type)
+                    if(!type_resolved(assign_ast->rhs))
                     {
                         goto finish;
                     }
@@ -372,7 +385,7 @@ bool typecheck_return(Context *ctx, Return_AST *return_ast)
     bool all_resolved = true;
     for(u64 i = 0; i < return_types.count; ++i)
     {
-        if(!return_types[i]->resolved_type)
+        if(!type_resolved(return_types[i]))
         {
             all_resolved = false;
             break;
@@ -421,7 +434,7 @@ bool typecheck_function_type(Context *ctx, u32 stage, Expr_AST *type, Function_T
             {
                 break;
             }
-            function_type_ast->resolved_type = &type_t_ast;
+            set_resolved_type(function_type_ast, &type_t_ast);
             add_job = true;
         } // fall through
         case 2: {
@@ -465,8 +478,8 @@ bool typecheck_function(Context *ctx, u32 stage, Expr_AST *type, Function_AST *f
     {
         case 0: {
             function_ast->flags |= EXPR_FLAG_NOT_LVALUE;
-            function_ast->prototype->resolved_type = &type_t_ast;
-            function_ast->resolved_type = function_ast->prototype;
+            set_resolved_type(function_ast->prototype, &type_t_ast);
+            set_resolved_type(function_ast, function_ast->prototype);
             auto parameter_types = function_ast->prototype->parameter_types;
             for(u64 i = 0; i < parameter_types.count; ++i)
             {
@@ -492,7 +505,7 @@ bool typecheck_function(Context *ctx, u32 stage, Expr_AST *type, Function_AST *f
             for(u64 i = 0; i < parameter_types.count; ++i)
             {
                 auto param_type = parameter_types[i];
-                if(default_values[i] && param_type && !param_type->resolved_type)
+                if(default_values[i] && param_type && !type_resolved(param_type))
                 {
                     goto finish;
                 }
@@ -517,7 +530,7 @@ bool typecheck_function(Context *ctx, u32 stage, Expr_AST *type, Function_AST *f
                 {
                     auto val = default_values[i];
                     assert(val);
-                    if(val->resolved_type)
+                    if(type_resolved(val))
                     {
                         parameter_types[i] = val->resolved_type;
                     }
@@ -533,7 +546,7 @@ bool typecheck_function(Context *ctx, u32 stage, Expr_AST *type, Function_AST *f
                 assert(parameter_types[i]);
                 if(param_names[i])
                 {
-                    param_names[i]->resolved_type = parameter_types[i];
+                    set_resolved_type(param_names[i], parameter_types[i]);
                 }
             }
             auto job = make_typecheck_job(nullptr, function_ast->block);
@@ -575,14 +588,14 @@ bool typecheck_function_call(Context *ctx, u32 stage, Expr_AST *type, Function_C
         case 1: {
             new_stage = 1;
             auto function = function_call_ast->function;
-            if(!function->resolved_type && add_job)
+            if(!type_resolved(function) && add_job)
             {
                 // TODO: this will need to be souped-up for overloading
                 // Note: no overloading based on return type, hence the nullptr
                 auto job = make_typecheck_job(nullptr, function);
                 do_typecheck_job(ctx, job);
             }
-            if(!function->resolved_type)
+            if(!type_resolved(function))
             {
                 break;
             }
@@ -607,18 +620,18 @@ bool typecheck_function_call(Context *ctx, u32 stage, Expr_AST *type, Function_C
             auto return_types = function_type->return_types;
             for(u64 i = 0; i < return_types.count; ++i)
             {
-                if(!return_types[i]->resolved_type)
+                if(!type_resolved(return_types[i]))
                 {
                     goto finish;
                 }
             }
             // TODO support multiple return types
-            function_call_ast->resolved_type = return_types[0];
+            set_resolved_type(function_call_ast, return_types[0]);
             
             auto param_types = function_type->parameter_types;
             for(u64 i = 0; i < param_types.count; ++i)
             {
-                if(!param_types[i]->resolved_type)
+                if(!type_resolved(param_types[i]))
                 {
                     goto finish;
                 }
@@ -664,12 +677,12 @@ bool typecheck_access(Context *ctx, u32 stage, Expr_AST *type, Access_AST *acces
         } // fall through
         case 1: {
             new_stage = 1;
-            if(!lhs->resolved_type && add_job)
+            if(!type_resolved(lhs) && add_job)
             {
                 auto job = make_typecheck_job(nullptr, lhs);
                 do_typecheck_job(ctx, job);
             }
-            if(!lhs->resolved_type)
+            if(!type_resolved(lhs))
             {
                 break;
             }
@@ -743,11 +756,11 @@ bool typecheck_access(Context *ctx, u32 stage, Expr_AST *type, Access_AST *acces
         } // fall through
         case 3: {
             new_stage = 3;
-            if(!access_ast->expr->resolved_type)
+            if(!type_resolved(access_ast->expr))
             {
                 break;
             }
-            access_ast->resolved_type = access_ast->expr->resolved_type;
+            set_resolved_type(access_ast, access_ast->expr->resolved_type);
             new_stage = 4;
         } // fall through
     }
@@ -801,7 +814,7 @@ bool typecheck_binop_ast(Context *ctx, u32 stage, Expr_AST *type, Binary_Operato
                     {
                         binop_type = &bool8_t_ast;
                     }
-                    binop_ast->resolved_type = binop_type;
+                    set_resolved_type(binop_ast, binop_type);
                     add_job = true;
                 } // fall through
                 case 2: {
@@ -815,11 +828,11 @@ bool typecheck_binop_ast(Context *ctx, u32 stage, Expr_AST *type, Binary_Operato
                 } // fall through
                 case 3: {
                     new_stage = 3;
-                    if(!binop_ast->lhs->resolved_type)
+                    if(!type_resolved(binop_ast->lhs))
                     {
                         goto finish;
                     }
-                    if(!binop_ast->rhs->resolved_type)
+                    if(!type_resolved(binop_ast->rhs))
                     {
                         goto finish;
                     }
@@ -871,11 +884,11 @@ bool typecheck_binop_ast(Context *ctx, u32 stage, Expr_AST *type, Binary_Operato
                 } // fall through
                 case 2: {
                     new_stage = 2;
-                    if(!binop_ast->lhs->resolved_type)
+                    if(!type_resolved(binop_ast->lhs))
                     {
                         goto finish;
                     }
-                    if(!binop_ast->rhs->resolved_type)
+                    if(!type_resolved(binop_ast->rhs))
                     {
                         goto finish;
                     }
@@ -893,7 +906,7 @@ bool typecheck_binop_ast(Context *ctx, u32 stage, Expr_AST *type, Binary_Operato
                             goto finish;
                         }
                     }
-                    binop_ast->resolved_type = combined;
+                    set_resolved_type(binop_ast, combined);
                     new_stage = 3;
                 } // fall through
             }
@@ -913,7 +926,7 @@ bool typecheck_binop_ast(Context *ctx, u32 stage, Expr_AST *type, Binary_Operato
                         // TODO: maybe make a canonical type table, so not every & makes a new type in memory
                         Unary_Operator_AST *type_to_deref = construct_ast(ctx->ast_pool, Unary_Operator_AST, 0, 0);
                         type_to_deref->flags |= AST_FLAG_SYNTHETIC;
-                        type_to_deref->resolved_type = &type_t_ast;
+                        set_resolved_type(type_to_deref, &type_t_ast);
                         type_to_deref->op = Unary_Operator::ref;
                         type_to_deref->operand = type;
                         type_to_check = type_to_deref;
@@ -925,7 +938,7 @@ bool typecheck_binop_ast(Context *ctx, u32 stage, Expr_AST *type, Binary_Operato
                 } // fall through
                 case 1: {
                     new_stage = 1;
-                    if(!binop_ast->lhs->resolved_type)
+                    if(!type_resolved(binop_ast->lhs))
                     {
                         goto finish;
                     }
@@ -949,7 +962,7 @@ bool typecheck_binop_ast(Context *ctx, u32 stage, Expr_AST *type, Binary_Operato
                     {
                         goto finish;
                     }
-                    binop_ast->resolved_type = lhs_type->operand;
+                    set_resolved_type(binop_ast, lhs_type->operand);
                     new_stage = 2;
                 } // fall through
             }
@@ -978,7 +991,7 @@ bool typecheck_binop_ast(Context *ctx, u32 stage, Expr_AST *type, Binary_Operato
             do_typecheck_job(ctx, job);
             
             // TODO: make sure this is a concrete bool type, not boollike
-            binop_ast->resolved_type = bool_type;
+            set_resolved_type(binop_ast, bool_type);
             new_stage = 1;
         } break;
     }
@@ -1045,11 +1058,11 @@ bool typecheck_number(Context *ctx, Expr_AST *type, Number_AST *number_ast)
             switch(size)
             {
                 case PRIM_SIZE4: {
-                    number_ast->resolved_type = &f32_t_ast;
+                    set_resolved_type(number_ast, &f32_t_ast);
                 } break;
                 case PRIM_NO_SIZE:
                 case PRIM_SIZE8: {
-                    number_ast->resolved_type = &f64_t_ast;
+                    set_resolved_type(number_ast, &f64_t_ast);
                 } break;
                 default: {
                     // Note: no floatlike type should have a different size
@@ -1071,17 +1084,17 @@ bool typecheck_number(Context *ctx, Expr_AST *type, Number_AST *number_ast)
                 switch(size)
                 {
                     case PRIM_SIZE1: {
-                        number_ast->resolved_type = &u8_t_ast;
+                        set_resolved_type(number_ast, &u8_t_ast);
                     } break;
                     case PRIM_SIZE2: {
-                        number_ast->resolved_type = &u16_t_ast;
+                        set_resolved_type(number_ast, &u16_t_ast);
                     } break;
                     case PRIM_SIZE4: {
-                        number_ast->resolved_type = &u32_t_ast;
+                        set_resolved_type(number_ast, &u32_t_ast);
                     } break;
                     case PRIM_NO_SIZE:
                     case PRIM_SIZE8: {
-                        number_ast->resolved_type = &u64_t_ast;
+                        set_resolved_type(number_ast, &u64_t_ast);
                     } break;
                     default: {
                         assert(false);
@@ -1094,17 +1107,17 @@ bool typecheck_number(Context *ctx, Expr_AST *type, Number_AST *number_ast)
                 switch(size)
                 {
                     case PRIM_SIZE1: {
-                        number_ast->resolved_type = &s8_t_ast;
+                        set_resolved_type(number_ast, &s8_t_ast);
                     } break;
                     case PRIM_SIZE2: {
-                        number_ast->resolved_type = &s16_t_ast;
+                        set_resolved_type(number_ast, &s16_t_ast);
                     } break;
                     case PRIM_SIZE4: {
-                        number_ast->resolved_type = &s32_t_ast;
+                        set_resolved_type(number_ast, &s32_t_ast);
                     } break;
                     case PRIM_NO_SIZE:
                     case PRIM_SIZE8: {
-                        number_ast->resolved_type = &s64_t_ast;
+                        set_resolved_type(number_ast, &s64_t_ast);
                     } break;
                     default: {
                         assert(false);
@@ -1115,7 +1128,7 @@ bool typecheck_number(Context *ctx, Expr_AST *type, Number_AST *number_ast)
     }
     finish:
     
-    if(number_ast->resolved_type)
+    if(type_resolved(number_ast))
     {
         return true;
     }
@@ -1145,7 +1158,7 @@ bool typecheck_enum(Context *ctx, u32 stage, Expr_AST *type, Enum_AST *enum_ast)
         } // fall through
         case 1: {
             new_stage = 1;
-            enum_ast->resolved_type = &type_t_ast;
+            set_resolved_type(enum_ast, &type_t_ast);
             for(u64 i = 0; i < enum_ast->values.count; ++i)
             {
                 // TODO: enum values should all have the same type
@@ -1182,7 +1195,7 @@ bool typecheck_struct(Context *ctx, u32 stage, Expr_AST *type, Struct_AST *struc
         } // fall through
         case 1: {
             new_stage = 1;
-            struct_ast->resolved_type = &type_t_ast;
+            set_resolved_type(struct_ast, &type_t_ast);
             
             for(u64 i = 0; i < struct_ast->constants.count; ++i)
             {
@@ -1247,13 +1260,13 @@ bool typecheck_unary(Context *ctx, u32 stage, Expr_AST *type, Unary_Operator_AST
                 } // fall through
                 case 2: {
                     new_stage = 2;
-                    if(!unop_ast->operand->resolved_type)
+                    if(!type_resolved(unop_ast->operand))
                     {
                         goto finish;
                     }
                     // TODO: make sure this is a concrete type, rather than numberlike_t_ast
                     // TODO: make sure it isn't negative an unsigned type
-                    unop_ast->resolved_type = unop_ast->operand->resolved_type;
+                    set_resolved_type(unop_ast, unop_ast->operand->resolved_type);
                     new_stage = 3;
                 } // fall through
             }
@@ -1271,7 +1284,7 @@ bool typecheck_unary(Context *ctx, u32 stage, Expr_AST *type, Unary_Operator_AST
                         // TODO: maybe make a canonical type table, so not every & makes a new type in memory
                         Unary_Operator_AST *type_to_deref = construct_ast(ctx->ast_pool, Unary_Operator_AST, 0, 0);
                         type_to_deref->flags |= AST_FLAG_SYNTHETIC;
-                        type_to_deref->resolved_type = &type_t_ast;
+                        set_resolved_type(type_to_deref, &type_t_ast);
                         type_to_deref->op = Unary_Operator::ref;
                         type_to_deref->operand = type;
                         type_to_check = type_to_deref;
@@ -1281,7 +1294,7 @@ bool typecheck_unary(Context *ctx, u32 stage, Expr_AST *type, Unary_Operator_AST
                 } // fall through
                 case 1: {
                     new_stage = 1;
-                    if(!unop_ast->operand->resolved_type)
+                    if(!type_resolved(unop_ast->operand))
                     {
                         goto finish;
                     }
@@ -1305,7 +1318,7 @@ bool typecheck_unary(Context *ctx, u32 stage, Expr_AST *type, Unary_Operator_AST
                     {
                         goto finish;
                     }
-                    unop_ast->resolved_type = operand_type->operand;
+                    set_resolved_type(unop_ast, operand_type->operand);
                     new_stage = 2;
                 } // fall through
             }
@@ -1356,7 +1369,7 @@ bool typecheck_unary(Context *ctx, u32 stage, Expr_AST *type, Unary_Operator_AST
                 } // fall through
                 case 1: {
                     new_stage = 1;
-                    if(!unop_ast->operand->resolved_type)
+                    if(!type_resolved(unop_ast->operand))
                     {
                         goto finish;
                     }
@@ -1380,25 +1393,25 @@ bool typecheck_unary(Context *ctx, u32 stage, Expr_AST *type, Unary_Operator_AST
                     }
                     if(unop_ast->operand->resolved_type == &type_t_ast)
                     {
-                        unop_ast->resolved_type = &type_t_ast;
+                        set_resolved_type(unop_ast, &type_t_ast);
                     }
                     else if(type)
                     {
                         // TODO: check if type matches?
                         // inner_type should match unop_ast->operand->resolved_type
                         // type should be a pointer type
-                        unop_ast->resolved_type = type;
+                        set_resolved_type(unop_ast, type);
                     }
                     else
                     {
                         // TODO: type table to reduce memory usage? (among other things)
                         Unary_Operator_AST *pointer_type = construct_ast(ctx->ast_pool, Unary_Operator_AST, 0, 0);
                         pointer_type->flags |= AST_FLAG_SYNTHETIC;
-                        pointer_type->resolved_type = &type_t_ast;
+                        set_resolved_type(pointer_type, &type_t_ast);
                         pointer_type->op = Unary_Operator::ref;
                         pointer_type->operand = unop_ast->operand->resolved_type;
                         
-                        unop_ast->resolved_type = pointer_type;
+                        set_resolved_type(unop_ast, pointer_type);
                     }
                     new_stage = 2;
                 } // fall through
@@ -1428,12 +1441,12 @@ bool typecheck_unary(Context *ctx, u32 stage, Expr_AST *type, Unary_Operator_AST
                 } // fall through
                 case 1: {
                     new_stage = 1;
-                    if(!unop_ast->operand->resolved_type)
+                    if(!type_resolved(unop_ast->operand))
                     {
                         goto finish;
                     }
                     // TODO: make sure this is a concrete type (instead of boollike)
-                    unop_ast->resolved_type = unop_ast->operand->resolved_type;
+                    set_resolved_type(unop_ast, unop_ast->operand->resolved_type);
                     new_stage = 2;
                 } // fall through
             }
@@ -1472,7 +1485,7 @@ bool typecheck_ident(Context *ctx, u32 stage, Expr_AST *type, Ident_AST *ident_a
         case 1: {
             new_stage = 1;
             Expr_AST *expr = ident_get_expr(ident_ast);
-            if(!expr->resolved_type)
+            if(!type_resolved(expr))
             {
                 break;
             }
@@ -1488,7 +1501,7 @@ bool typecheck_ident(Context *ctx, u32 stage, Expr_AST *type, Ident_AST *ident_a
                     break;
                 }
             }
-            ident_ast->resolved_type = expr->resolved_type;
+            set_resolved_type(ident_ast, expr->resolved_type);
             new_stage = 3;
         } // fall through
     }
@@ -1509,13 +1522,13 @@ bool typecheck_primitive(Context *ctx, Expr_AST *type, Primitive_AST *prim_ast)
         Status status = types_match(ctx, type, &type_t_ast);
         if(status == Status::good)
         {
-            prim_ast->resolved_type = &type_t_ast;
+            set_resolved_type(prim_ast, &type_t_ast);
             return true;
         }
     }
     else
     {
-        prim_ast->resolved_type = &type_t_ast;
+        set_resolved_type(prim_ast, &type_t_ast);
         return true;
     }
     
@@ -1564,16 +1577,16 @@ bool typecheck_bool(Context *ctx, Expr_AST *type, Bool_AST *bool_ast)
             {
                 case PRIM_NO_SIZE:
                 case PRIM_SIZE1: {
-                    bool_ast->resolved_type = &bool8_t_ast;
+                    set_resolved_type(bool_ast, &bool8_t_ast);
                 } break;
                 case PRIM_SIZE2: {
-                    bool_ast->resolved_type = &bool16_t_ast;
+                    set_resolved_type(bool_ast, &bool16_t_ast);
                 } break;
                 case PRIM_SIZE4: {
-                    bool_ast->resolved_type = &bool32_t_ast;
+                    set_resolved_type(bool_ast, &bool32_t_ast);
                 } break;
                 case PRIM_SIZE8: {
-                    bool_ast->resolved_type = &bool64_t_ast;
+                    set_resolved_type(bool_ast, &bool64_t_ast);
                 } break;
                 default: {
                     assert(false);
@@ -1584,7 +1597,7 @@ bool typecheck_bool(Context *ctx, Expr_AST *type, Bool_AST *bool_ast)
     }
     else
     {
-        bool_ast->resolved_type = &bool8_t_ast;
+        set_resolved_type(bool_ast, &bool8_t_ast);
         return true;
     }
     
@@ -1597,7 +1610,7 @@ bool typecheck_bool(Context *ctx, Expr_AST *type, Bool_AST *bool_ast)
 
 Status reduce_type(Context *ctx, Expr_AST *type, Expr_AST **type_out)
 {
-    assert(type->resolved_type);
+    assert(type_resolved(type));
     // assert type->resolved_type matches type_t_ast ?
     
     switch(type->type)

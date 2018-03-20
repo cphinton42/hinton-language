@@ -36,6 +36,9 @@ enum class Status
     bad,
 };
 
+void set_resolved_type(Expr_AST *expr, Expr_AST *type);
+bool type_resolved(Expr_AST *expr);
+
 Status types_match(Context *ctx, Expr_AST *t1, Expr_AST *t2, bool report = true);
 Status reduce_type(Context *ctx, Expr_AST *type, Expr_AST **type_out);
 
